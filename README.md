@@ -98,14 +98,26 @@ reference, and explanation are kept separate rather than blended.
 
 ---
 
-## Licensing note
+## Licensing
 
 **No vendor binaries are redistributed in this repository.**
 
-NXP firmware blobs (DDR training firmware, HDMI firmware, and similar) are
-covered by NXP's licence terms and are fetched at build time via `SRC_URI`
-with the appropriate `LIC_FILES_CHKSUM`. The `.gitignore` blocks `*.bin`,
-`*.fw` and `*.elf` by default so that a stray `git add .` cannot leak them.
+NXP firmware blobs — DDR training firmware (`lpddr4_pmu_train_*.bin`), HDMI
+firmware, and similar — are covered by NXP's licence terms. They are fetched
+at build time through `SRC_URI` with the appropriate `LIC_FILES_CHKSUM`, never
+committed here. `.gitignore` blocks `*.bin`, `*.fw` and `*.elf` by default so
+that a stray `git add .` cannot leak them.
+
+Yocto distinguishes two mechanisms, and this layer uses both deliberately:
+
+- `LICENSE` and `LIC_FILES_CHKSUM` **record** what a recipe ships and verify
+  the licence text has not changed upstream.
+- `LICENSE_FLAGS` **blocks**. A recipe carrying a restricted flag will not
+  build until the flag is listed in `LICENSE_FLAGS_ACCEPTED`, so restricted
+  components cannot end up in an image by accident.
+
+Any restricted component this layer depends on is listed explicitly, with the
+reason, rather than being enabled through a blanket accept.
 
 The layer's own source is released under the licence in `LICENSE`.
 
