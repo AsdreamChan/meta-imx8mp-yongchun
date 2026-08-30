@@ -103,13 +103,22 @@ than a precise diagnosis afterwards.
 Building `rpi-test-image` stopped with:
 
 ```
-ERROR: Nothing RPROVIDES 'linux-firmware-rpidistro-bcm43456'
-linux-firmware-rpidistro RPROVIDES linux-firmware-rpidistro-bcm43456 but was
+ERROR: Nothing RPROVIDES 'linux-firmware-rpidistro-bcm43455'
+linux-firmware-rpidistro RPROVIDES linux-firmware-rpidistro-bcm43455 but was
 skipped: Has a restricted license 'synaptics-killswitch' which is not listed
 in your LICENSE_FLAGS_ACCEPTED.
 Missing or unbuildable dependency chain was:
-  ['rpi-test-image', 'packagegroup-base-extended', 'linux-firmware-rpidistro-bcm43456']
+  ['rpi-test-image', 'packagegroup-base-extended', 'linux-firmware-rpidistro-bcm43455']
 ```
+
+The named package is not significant on its own.
+`conf/machine/raspberrypi4-64.conf` lists both `bcm43455` and `bcm43456` in
+`MACHINE_EXTRA_RRECOMMENDS`, and both carry the same restricted flag — so
+more than one package is blocked and the error names whichever the resolver
+reached first. Two runs of the same failure named different ones.
+
+Worth knowing while debugging: the package in the message is an example of
+the problem, not the cause of it. Chasing that specific name wastes time.
 
 Yocto separates two mechanisms that are easy to conflate:
 
@@ -126,21 +135,27 @@ line someone has to write deliberately:
 LICENSE_FLAGS_ACCEPTED = "synaptics-killswitch"
 ```
 
-The dependency chain in the error message is worth noting too: image →
-packagegroup → blocked package. Locating the actual source of a requirement
-usually needs no further investigation.
+The dependency chain in the error message is the useful part: image →
+packagegroup → blocked package. Locating what actually pulled in the
+requirement usually needs no further investigation.
 
 ---
 
 ## Composition is the recurring pattern
 
-`rpi-test-image` does not define an image from scratch; it layers additions on
-top of a core image. The same shape appears in machine configuration —
-`imx8mp-lpddr4-frdm.conf` consists of `require conf/machine/include/imx8mp-evk.inc`
-plus a handful of overrides — and again in device tree, where a board `.dts`
-includes a SoC `.dtsi`.
+`rpi-test-image` does not define an image from scratch; it pulls in a core
+image and adds to it. The same shape appears in machine configuration —
+`imx8mp-lpddr4-frdm.conf` consists of
+`require conf/machine/include/imx8mp-evk.inc` plus a handful of overrides —
+and again in device tree, where a board `.dts` includes a SoC `.dtsi`.
 
 Learning it once covers all three.
+
+The two keywords are not interchangeable. `require` fails the parse if the
+target is missing; `include` only warns and carries on. A machine
+configuration that cannot find its SoC include should fail loudly, so
+`require` is correct there. An image recipe adding optional content can
+reasonably use `include`.
 
 `bitbake-layers show-recipes "*image*"` is a better way to find what can
 actually be built than searching the filesystem, because it reflects the
