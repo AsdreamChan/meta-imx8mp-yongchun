@@ -10,12 +10,7 @@ Baseline for the boot-time work in week 8. Nothing has been optimised.
 - Init: **SysV init 3.04**, runlevel 5 — not systemd
 - Firmware: 2025-04-30T13:33:39, hash `5560078dcc8591a00f57b9068d13e5544aeef3aa`
 
-Raw logs, in `bsp-scratch/sources/build-logs/`:
-
-- `2026-08-26-rpi-boot-1-undervolted.log` — invalid, see below
-- `2026-08-26-rpi-boot-2-adequate-psu.log`
-- `2026-08-26-rpi-boot-3-clean-baseline.log` — **this one**, includes the
-  shutdown sequence
+Raw serial console logs are kept in a private working repository. The relevant excerpts are quoted inline below; the filenames are recorded here so the figures remain traceable to a specific capture: `2026-08-26-rpi-boot-1-undervolted.log` (invalid, see below), `-2-adequate-psu.log`, and `-3-clean-baseline.log` (this one, including the shutdown sequence).
 
 ---
 
