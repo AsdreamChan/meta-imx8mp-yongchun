@@ -2,7 +2,9 @@
 
 ## Status
 
-Accepted (2026-09-15)
+Accepted (2026-09-15). Amended 2026-09-16 and 2026-09-20 as the migration was
+carried out — see the correction notes on items 2 and 4, and the disk estimate
+superseded by [ADR-0003](0003-build-tree-lifecycle.md).
 
 Implements the second half of [ADR-0001](0001-yocto-branch-strategy.md).
 
@@ -36,6 +38,10 @@ git ls-remote --heads https://github.com/openembedded/openembedded-core
 NXP's `imx-linux-wrynose` manifest reflects this: it fetches `bitbake`,
 `openembedded-core` and `meta-yocto` rather than `poky`.
 
+Confirmed on the target tree: the manifest fetches 27 repositories and `poky`
+is not among them. `meta-poky` the *layer* is still present, provided by
+`meta-yocto` — it is the aggregate repository that is gone, not the layer.
+
 **Impact: none on setup.** The manifest handles source acquisition, and the
 entry point is unchanged —
 `MACHINE=<machine> DISTRO=fsl-imx-<backend> source ./imx-setup-release.sh`.
@@ -43,7 +49,7 @@ entry point is unchanged —
 
 Evidence: `sources/build-logs/2026-08-27-branch-survey.md`
 
-### 2. `S = "${WORKDIR}"` will break — **verified on Scarthgap, expected on Wrynose**
+### 2. `S = "${WORKDIR}"` will break — **verified on both**
 
 The first hand-written recipe failed with:
 
@@ -66,10 +72,25 @@ $ bitbake -e hello | grep -B8 "^UNPACKDIR="
 Newer releases introduce `UNPACKDIR`, separating the unpack destination from
 `WORKDIR`. **Any recipe relying on `S = "${WORKDIR}"` needs revisiting.**
 
-The presence of `UNPACKDIR` on Wrynose has not been verified directly — check
-it first thing.
+> **Verified on Wrynose, 2026-09-20.** Originally recorded as expected.
 
-Evidence: `sources/build-logs/2026-09-06-first-handwritten-recipe.md`
+```
+$ bitbake -e imx-image-core | grep -B8 "^UNPACKDIR="
+# $UNPACKDIR
+#   set .../openembedded-core/meta/conf/bitbake.conf:417
+#     [_defaultval] "${WORKDIR}/sources"
+UNPACKDIR=".../imx-image-core/1.0/sources"
+```
+
+The default is **`${WORKDIR}/sources`**, not `${WORKDIR}`. So on Wrynose:
+
+```
+S = "${WORKDIR}"      # works on Scarthgap, breaks here
+S = "${UNPACKDIR}"    # correct
+```
+
+Evidence: `sources/build-logs/2026-09-06-first-handwritten-recipe.md` (Scarthgap),
+`sources/build-logs/2026-09-17-imx-first-build-three-failures.md` (Wrynose)
 
 ### 3. `LAYERSERIES_COMPAT_<layer>` must be updated
 
@@ -79,19 +100,44 @@ declaring only `scarthgap` produces a parse-time error on Wrynose.
 **Impact: one line per layer.** Trivial, but it fails the build immediately,
 so it belongs at the top of the checklist rather than the bottom.
 
-### 4. `local.conf` is de-emphasised in favour of configuration fragments
+### 4. `local.conf` is de-emphasised in favour of configuration fragments — **corrected 2026-09-16**
 
-From 6.0 the documented workflow uses `bitbake-setup` and
-`bitbake-config-build enable-fragment ...`, leaving `local.conf` largely
-empty.
+> **Correction.** This item originally claimed that NXP's
+> `imx-setup-release.sh` is purely the old workflow and that fragments
+> therefore do not apply. That is wrong. Verified on setup:
 
-**Impact: none, deliberately.** NXP's `imx-setup-release.sh` is the old
-workflow, and so is every existing production project. ADR-0001 records the
-decision not to use `bitbake-setup`: the fragment tooling hides exactly the
-layer mechanics this project is meant to demonstrate.
+The setup script writes `build/conf/toolcfg.conf` and enables a fragment:
 
-The two workflows produce different build directory layouts, so **pick one and
-stay with it**.
+```
+OE_FRAGMENTS += "core/yocto/root-login-with-empty-password"
+```
+
+`bitbake-config-build list-fragments` works and offers others, including
+`core/yocto/sstate-mirror-cdn` and `core/yocto/sbom-cve-check`.
+
+**The actual situation is hybrid, weighted toward the old mechanism:**
+
+| Mechanism | State |
+|---|---|
+| `bblayers.conf` | present, 40 lines |
+| `local.conf` | present, but **21 lines** |
+| `toolcfg.conf` + `OE_FRAGMENTS` | written automatically by the setup script |
+| `bitbake-config-build` | available |
+
+Core configuration — `MACHINE`, `DISTRO`, `DL_DIR`, `PACKAGE_CLASSES`,
+`ACCEPT_FSL_EULA` — remains in `local.conf`. Only the optional
+root-login-without-password feature is expressed as a fragment.
+
+For comparison, the Scarthgap tree's `local.conf` carried roughly seven
+hand-added settings on top of a 200-line sample. Twenty-one lines is a real
+reduction.
+
+**Impact on the plan: none.** Customising the machine in week 5 goes through
+`local.conf` and a machine configuration file, as planned. But the claim that
+fragments are absent here was false, and `core/yocto/sstate-mirror-cdn` is
+worth looking at — on the Scarthgap tree the same thing took four hand-written
+variables in `local.conf`, and getting one of them wrong silently produced a
+0% mirror hit rate.
 
 ### 5. `bitbake-setup` exists
 
@@ -104,11 +150,16 @@ Migrate at the platform boundary, in this order:
 
 1. `repo init` the NXP `imx-linux-wrynose` manifest, `repo sync`, and set up
    with `imx-setup-release.sh`. Machine is `imx8mp-lpddr4-frdm`.
+   **Done 2026-09-16**: 27 repositories, 881 MB of metadata, 4124 recipes
+   parsed against Scarthgap's 963.
 2. Build the vendor BSP unmodified first. Record the environment, the
    duration, and every error encountered — that baseline is the reference for
    everything after it.
+   **Done 2026-09-20** after four attempts; see
+   [`00-vendor-bsp-baseline.md`](../00-vendor-bsp-baseline.md).
 3. Confirm `UNPACKDIR` exists (`bitbake -e <recipe> | grep -B8 "^UNPACKDIR="`)
    before writing any recipe with a `file://` source.
+   **Done**: it exists, default `${WORKDIR}/sources`. See item 2.
 4. Port `meta-mylayer`'s contents into `meta-imx8mp-yongchun`, updating
    `LAYERSERIES_COMPAT` and revisiting `S` in the process.
 
@@ -125,9 +176,11 @@ this tree" unmeasurable.
 
 ### Accepted
 
-- Disk usage roughly doubles. The VHDX needs sparse mode enabled before week
-  4 (`wsl --shutdown`, then `wsl --manage <distro> --set-sparse true`),
-  since it grows and never shrinks.
+- ~~Disk usage roughly doubles. The VHDX needs sparse mode enabled before
+  week 4.~~ **Superseded by [ADR-0003](0003-build-tree-lifecycle.md).** The
+  vendor BSP's `tmp/` alone reached 214 GB — an order of magnitude beyond the
+  estimate — and Microsoft has since disabled sparse VHD mode over
+  data-corruption risk.
 - Recipe syntax drift between 5.0 and 6.0 beyond the five items above will be
   discovered rather than anticipated. Five is what three weeks surfaced; it is
   not a complete list.
@@ -161,3 +214,7 @@ Sources marked `sources/...` are in a private working repository; they are cited
   absence of `UNPACKDIR`
 - `sources/vendor-docs/2026-08-27-meta-imx-8mp-machines.md` — which `meta-imx`
   branches carry `imx8mp-lpddr4-frdm.conf`
+- `sources/build-logs/2026-09-17-imx-first-build-three-failures.md` — the
+  migration as carried out, and `UNPACKDIR` on Wrynose
+- [ADR-0003](0003-build-tree-lifecycle.md) — disk usage and build tree lifecycle
+- [`00-vendor-bsp-baseline.md`](../00-vendor-bsp-baseline.md) — the resulting baseline
