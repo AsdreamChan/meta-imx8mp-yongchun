@@ -46,17 +46,95 @@ and the parse time and task count follow directly from that.
 ## Boot flow
 
 Every stage announces itself on the serial console, so the chain can be read
-straight off a boot log rather than inferred.
+straight off a boot log rather than inferred. The load addresses come from the
+build tool's own configuration, and they reappear at run time.
 
-| Stage | Evidence |
+```mermaid
+flowchart TD
+    ROM["<b>Boot ROM</b><br/>on-chip, reads SD at offset 0x8000"]
+    SPL["<b>U-Boot SPL</b><br/>loaded at 0x920000"]
+    DDR["<b>DDR PHY training</b><br/>lpddr4_pmu_train_*.bin ×4"]
+    FIT["<b>FIT image</b> (u-boot.itb)<br/>assembled by mkimage_fit_atf.sh"]
+    BL31["<b>ATF · BL31</b><br/>loaded at 0x970000<br/>bl31-imx8mp.bin-optee"]
+    TEE["<b>OP-TEE · BL32</b><br/>loaded at 0x56000000<br/>resident in secure world"]
+    UB["<b>U-Boot proper</b><br/>u-boot-nodtb.bin + imx8mp-frdm.dtb"]
+    K["<b>Linux 6.18.20</b><br/>booti, dtb at 0x43000000"]
+    INIT["<b>systemd 259.5</b><br/>Run /sbin/init at 4.539 s"]
+
+    ROM --> SPL
+    SPL --> DDR
+    DDR -->|DRAM usable| FIT
+    FIT --> BL31
+    FIT --> TEE
+    FIT --> UB
+    BL31 -->|drops to non-secure EL2| UB
+    UB --> K
+    K --> INIT
+```
+
+| Stage | Evidence in the boot log |
 |---|---|
-| **Boot ROM** | `Trying to boot from BOOTROM` / `Boot Stage: Primary boot` |
+| **Boot ROM** | `Trying to boot from BOOTROM` / `image offset 0x8000, pagesize 0x200` |
 | **SPL** | `U-Boot SPL 2026.04-lf_v2026.04+g6eeef838dac+p0` |
 | **DDR training** | `DDRINFO: start DRAM init` → `DRAM rate 4000MTS` → `ddrphy calibration done` |
 | **ATF (BL31)** | `NOTICE: BL31: v2.14.1(release):lf-6.18.20-2.0.0` |
 | **U-Boot proper** | `Model: NXP i.MX8MPlus LPDDR4 FRDM board`, `DRAM: 4 GiB` |
-| **Kernel** | `Starting kernel ...` |
+| **Kernel** | `Starting kernel ...`, `CPU: All CPU(s) started at EL2` |
 | **Init** | `Run /sbin/init as init process` at 4.539 s |
+
+### What goes into the boot image
+
+`imx-boot` assembles these, all visible in `tmp/deploy/images/<machine>/imx-boot-tools/`:
+
+| Component | Role |
+|---|---|
+| `u-boot-spl.bin-…` | SPL |
+| `lpddr4_pmu_train_{1d,2d}_{dmem,imem}_202006.bin` | DDR PHY training firmware |
+| `bl31-imx8mp.bin-optee` | ATF, **built with OP-TEE support** |
+| `tee.bin` | OP-TEE (BL32) |
+| `u-boot-nodtb.bin` + `imx8mp-frdm.dtb` | U-Boot proper |
+| `mkimage_fit_atf.sh` | Packs ATF, OP-TEE and U-Boot into one FIT image |
+
+The build target is `flash_evk`, which `mkimage_imx8` invokes as
+`-loader u-boot-spl-ddr.bin <SPL_LOAD_ADDR> -second_loader u-boot.itb` —
+SPL together with the DDR firmware as the first loader, the FIT image as the
+second.
+
+### The load addresses reappear at run time
+
+`imx-mkimage`'s `soc.mak`, in its `iMX8MP` branch:
+
+```
+TEE_LOAD_ADDR ?= 0x56000000
+ATF_LOAD_ADDR = 0x00970000
+SPL_LOAD_ADDR = 0x920000
+```
+
+And the kernel, much later:
+
+```
+OF: reserved mem: 0x0000000056000000..0x0000000057dfffff (30720 KiB) nomap non-reusable optee_core@56000000
+```
+
+The same address from three places: the build tool decides where OP-TEE is
+loaded, the device tree reserves that region, and the kernel stays out of it.
+
+### No HDMI firmware on this SoC
+
+`imx-boot-tools/` contains `signed_hdmi_imx8m.bin`, which suggests HDMI firmware
+is part of the boot chain. It is not, here. `soc.mak` selects it only when
+`HDMI = yes`, and the `iMX8MP` branch sets:
+
+```
+else ifeq ($(SOC),iMX8MP)
+PLAT = imx8mp
+HDMI = no
+```
+
+The file is present because `imx-boot-firmware-files` ships it for the whole
+i.MX8M family. The i.MX8MQ needs a signed HDMI firmware loaded during boot; the
+i.MX8M Plus uses a different HDMI controller
+(`dwhdmi-imx: Detected HDMI TX controller v2.13a`) that does not.
 
 ### DDR training is the firmware blob doing its job
 
