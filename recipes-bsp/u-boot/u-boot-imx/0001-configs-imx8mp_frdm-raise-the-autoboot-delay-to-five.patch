@@ -1,0 +1,26 @@
+From dcad969f69c48782429955dd82801bef068419d4 Mon Sep 17 00:00:00 2001
+From: Bill Chan <bill910174@gmail.com>
+Date: Fri, 25 Sep 2026 21:29:14 +0800
+Subject: [PATCH] configs: imx8mp_frdm: raise the autoboot delay to five
+ seconds
+
+Two seconds is not enough to reliably interrupt autoboot over a serial console
+when the terminal is on the other side of a USB bridge.
+
+Upstream-Status: Inappropriate [configuration]
+---
+ configs/imx8mp_frdm_defconfig | 1 +
+ 1 file changed, 1 insertion(+)
+
+diff --git a/configs/imx8mp_frdm_defconfig b/configs/imx8mp_frdm_defconfig
+index 87694560..452db481 100644
+--- a/configs/imx8mp_frdm_defconfig
++++ b/configs/imx8mp_frdm_defconfig
+@@ -214,3 +214,4 @@ CONFIG_EFI_HAVE_CAPSULE_UPDATE=y
+ CONFIG_FIT_SIGNATURE=y
+ 
+ CONFIG_BOOTDEV_ETH=n
++CONFIG_BOOTDELAY=5
+-- 
+2.43.0
+
