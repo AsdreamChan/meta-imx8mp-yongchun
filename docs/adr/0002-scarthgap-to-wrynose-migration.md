@@ -2,8 +2,8 @@
 
 ## Status
 
-Accepted (2026-09-15). Amended 2026-09-16 and 2026-09-20 as the migration was
-carried out — see the correction notes on items 2 and 4, and the disk estimate
+Accepted (2026-09-15). Amended 2026-09-16, 2026-09-20 and 2026-09-23 as the
+migration was carried out — see the correction notes on items 2 and 4, and the disk estimate
 superseded by [ADR-0003](0003-build-tree-lifecycle.md).
 
 Implements the second half of [ADR-0001](0001-yocto-branch-strategy.md).
@@ -16,8 +16,9 @@ FRDM-IMX8MPLUS. It recorded *why* the switch is unavoidable — `meta-imx` only
 gained `imx8mp-lpddr4-frdm.conf` after Scarthgap, so the target board does not
 exist on the release the week 1–3 reference material targets.
 
-It did not record *what* would actually break. Three weeks of work have now
-surfaced five concrete differences, one of which was found by hitting it.
+It did not record *what* would actually break. Three weeks of work surfaced
+five concrete differences, one of which was found by hitting it; a sixth
+appeared in week 5 while customising the distro.
 
 This record exists so week 4 starts from a checklist rather than from
 discovery.
@@ -143,6 +144,38 @@ variables in `local.conf`, and getting one of them wrong silently produced a
 
 Not a break, but worth knowing it is the documented path in the 6.0 Quick
 Start. Deliberately unused here. See ADR-0001.
+
+### 6. `POKY_DEFAULT_DISTRO_FEATURES` is empty — **added 2026-09-23**
+
+> Found while customising the distro in week 5, not anticipated when this
+> record was written.
+
+On Scarthgap, `meta-poky/conf/distro/poky.conf` defines it:
+
+```
+POKY_DEFAULT_DISTRO_FEATURES = "opengl ptest multiarch wayland vulkan"
+DISTRO_FEATURES ?= "${DISTRO_FEATURES_DEFAULT} ${POKY_DEFAULT_DISTRO_FEATURES}"
+```
+
+On Wrynose the same file sets it to the empty string:
+
+```
+$ bitbake -e | grep -B15 "^POKY_DEFAULT_DISTRO_FEATURES="
+#   set .../meta-yocto/meta-poky/conf/distro/poky.conf:16
+#     ""
+POKY_DEFAULT_DISTRO_FEATURES=""
+```
+
+Those features are still present in the final `DISTRO_FEATURES` — `opengl`,
+`ptest`, `multiarch` and `vulkan` all survive. They are assembled somewhere
+else now.
+
+**Impact: a diagnostic, not a build.** Week 3 used this variable to tell "the
+distro file was never loaded" apart from "it was loaded but the assignment
+lost" — an empty value meant the `require` chain was broken. **That test does
+not work here**, because empty is the correct value. Distinguishing the two
+cases on Wrynose needs a different variable, or `bitbake -e | grep -B15` on
+whatever the distro file itself sets.
 
 ## Decision
 
