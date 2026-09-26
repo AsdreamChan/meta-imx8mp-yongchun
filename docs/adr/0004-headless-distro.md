@@ -240,10 +240,10 @@ not deleting — it was measured, and so is this.
 
 - [`00-vendor-bsp-baseline.md`](../00-vendor-bsp-baseline.md) — what this is
   measured against, including the 3.161 s `containerd` figure
-- `sources/build-logs/2026-09-15-distro-change-cost.md` — the Scarthgap
+- `sources/build-logs/rpi/2026-09-15-distro-change-cost.md` — the Scarthgap
   measurement this contradicts
-- `sources/build-logs/2026-09-20-imx-boot-composition.md` — what `-minimal`
+- `sources/build-logs/imx8mp/2026-09-20-imx-boot-composition.md` — what `-minimal`
   removes, and the `fsl-imx-extended.inc` contents
-- `sources/build-logs/2026-09-23-yongchun-image-first-boot.log` — the boot
+- `sources/build-logs/imx8mp/2026-09-23-yongchun-image-first-boot.log` — the boot
   quoted above
 

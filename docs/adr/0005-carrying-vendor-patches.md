@@ -189,7 +189,7 @@ version will not load under another.
 
 ## References
 
-- `sources/build-logs/2026-09-25-custom-layer-distro-machine-kernel.md`
+- `sources/build-logs/imx8mp/2026-09-25-custom-layer-distro-machine-kernel.md`
 - [ADR-0002](0002-scarthgap-to-wrynose-migration.md) — `SRCREV` pinning at the
   manifest level
 

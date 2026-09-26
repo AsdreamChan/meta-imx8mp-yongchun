@@ -145,5 +145,5 @@ free and `compact` achieves nothing.
 ## References
 
 - [ADR-0002](0002-scarthgap-to-wrynose-migration.md) — the superseded estimate
-- `sources/build-logs/2026-09-17-imx-first-build-three-failures.md` — the ten
+- `sources/build-logs/imx8mp/2026-09-17-imx-first-build-three-failures.md` — the ten
   hours, and why it took three attempts

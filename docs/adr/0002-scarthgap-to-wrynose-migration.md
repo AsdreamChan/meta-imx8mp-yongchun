@@ -48,7 +48,7 @@ entry point is unchanged —
 `MACHINE=<machine> DISTRO=fsl-imx-<backend> source ./imx-setup-release.sh`.
 `bblayers.conf`, `local.conf`, layer priority and recipe syntax are unaffected.
 
-Evidence: `sources/build-logs/2026-08-27-branch-survey.md`
+Evidence: `sources/build-logs/cross/2026-08-27-branch-survey.md`
 
 ### 2. `S = "${WORKDIR}"` will break — **verified on both**
 
@@ -90,8 +90,8 @@ S = "${WORKDIR}"      # works on Scarthgap, breaks here
 S = "${UNPACKDIR}"    # correct
 ```
 
-Evidence: `sources/build-logs/2026-09-06-first-handwritten-recipe.md` (Scarthgap),
-`sources/build-logs/2026-09-17-imx-first-build-three-failures.md` (Wrynose)
+Evidence: `sources/build-logs/rpi/2026-09-06-first-handwritten-recipe.md` (Scarthgap),
+`sources/build-logs/imx8mp/2026-09-17-imx-first-build-three-failures.md` (Wrynose)
 
 ### 3. `LAYERSERIES_COMPAT_<layer>` must be updated
 
@@ -242,12 +242,12 @@ this tree" unmeasurable.
 Sources marked `sources/...` are in a private working repository; they are cited for traceability rather than as links.
 
 - [ADR-0001](0001-yocto-branch-strategy.md)
-- `sources/build-logs/2026-08-27-branch-survey.md` — branch availability
-- `sources/build-logs/2026-09-06-first-handwritten-recipe.md` — `S` and the
+- `sources/build-logs/cross/2026-08-27-branch-survey.md` — branch availability
+- `sources/build-logs/rpi/2026-09-06-first-handwritten-recipe.md` — `S` and the
   absence of `UNPACKDIR`
 - `sources/vendor-docs/2026-08-27-meta-imx-8mp-machines.md` — which `meta-imx`
   branches carry `imx8mp-lpddr4-frdm.conf`
-- `sources/build-logs/2026-09-17-imx-first-build-three-failures.md` — the
+- `sources/build-logs/imx8mp/2026-09-17-imx-first-build-three-failures.md` — the
   migration as carried out, and `UNPACKDIR` on Wrynose
 - [ADR-0003](0003-build-tree-lifecycle.md) — disk usage and build tree lifecycle
 - [`00-vendor-bsp-baseline.md`](../00-vendor-bsp-baseline.md) — the resulting baseline
