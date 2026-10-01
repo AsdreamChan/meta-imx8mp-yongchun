@@ -1,5 +1,5 @@
-From 18d2ef624afd7ebe599c83419b93a12d52d74a8d Mon Sep 17 00:00:00 2001
-From: Bill Chan <bill910174@gmail.com>
+From 058d7790ff0ae6b9334c4136e60842c405c79998 Mon Sep 17 00:00:00 2001
+From: AsdreamChan <53651187+AsdreamChan@users.noreply.github.com>
 Date: Thu, 1 Oct 2026 11:16:26 +0800
 Subject: [PATCH 2/2] arm64: dts: imx8mp-frdm: add an HD44780 LCD behind a
  PCF8574 on I2C3
@@ -17,8 +17,7 @@ an overlay. It is carried in the base dts for the first bring-up and
 will move to an overlay later.
 
 Upstream-Status: Inappropriate [configuration]
-
-Signed-off-by: Bill Chan <bill910174@gmail.com>
+Signed-off-by: AsdreamChan <53651187+AsdreamChan@users.noreply.github.com>
 ---
  arch/arm64/boot/dts/freescale/imx8mp-frdm.dts | 21 +++++++++++++++++++
  1 file changed, 21 insertions(+)

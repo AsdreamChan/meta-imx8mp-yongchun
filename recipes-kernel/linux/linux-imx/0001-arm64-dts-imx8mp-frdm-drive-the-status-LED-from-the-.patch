@@ -1,7 +1,7 @@
-From 6c29a08d13b9fbb28c55bef869fa8055654bdb35 Mon Sep 17 00:00:00 2001
-From: Bill Chan <bill910174@gmail.com>
+From 906dcf7e85c1c48aa186ff21a439e47b3da0f5fc Mon Sep 17 00:00:00 2001
+From: AsdreamChan <53651187+AsdreamChan@users.noreply.github.com>
 Date: Fri, 25 Sep 2026 17:34:13 +0800
-Subject: [PATCH] arm64: dts: imx8mp-frdm: drive the status LED from the
+Subject: [PATCH 1/2] arm64: dts: imx8mp-frdm: drive the status LED from the
  heartbeat trigger
 MIME-Version: 1.0
 Content-Type: text/plain; charset=UTF-8
@@ -12,6 +12,7 @@ confirm at a glance — /sys/class/leds/status/trigger should read [heartbeat]
 and the green LED should pulse.
 
 Upstream-Status: Inappropriate [configuration]
+Signed-off-by: AsdreamChan <53651187+AsdreamChan@users.noreply.github.com>
 ---
  arch/arm64/boot/dts/freescale/imx8mp-frdm.dts | 2 +-
  1 file changed, 1 insertion(+), 1 deletion(-)
