@@ -1,7 +1,7 @@
 From 906dcf7e85c1c48aa186ff21a439e47b3da0f5fc Mon Sep 17 00:00:00 2001
 From: AsdreamChan <53651187+AsdreamChan@users.noreply.github.com>
 Date: Fri, 25 Sep 2026 17:34:13 +0800
-Subject: [PATCH 1/2] arm64: dts: imx8mp-frdm: drive the status LED from the
+Subject: [PATCH] arm64: dts: imx8mp-frdm: drive the status LED from the
  heartbeat trigger
 MIME-Version: 1.0
 Content-Type: text/plain; charset=UTF-8

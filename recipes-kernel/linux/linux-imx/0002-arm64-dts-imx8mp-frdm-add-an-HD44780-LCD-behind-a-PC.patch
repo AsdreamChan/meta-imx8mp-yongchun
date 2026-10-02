@@ -1,8 +1,8 @@
 From 058d7790ff0ae6b9334c4136e60842c405c79998 Mon Sep 17 00:00:00 2001
 From: AsdreamChan <53651187+AsdreamChan@users.noreply.github.com>
 Date: Thu, 1 Oct 2026 11:16:26 +0800
-Subject: [PATCH 2/2] arm64: dts: imx8mp-frdm: add an HD44780 LCD behind a
- PCF8574 on I2C3
+Subject: [PATCH] arm64: dts: imx8mp-frdm: add an HD44780 LCD behind a PCF8574
+ on I2C3
 
 Describe a 16x2 character LCD attached to the expansion header's I2C3
 pins through a PCF8574 I2C backpack. The expander is registered as a
