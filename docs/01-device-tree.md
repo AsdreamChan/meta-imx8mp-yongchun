@@ -158,9 +158,10 @@ The pad value, decoded against the field layout in the reference manual
 Note that DSE is not encoded in order of strength: `10` is X2 and `01` is X4.
 
 Bit 30 is not a pad bit at all; the pad register's upper bits are reserved.
-It is read by the Linux pinctrl driver as a request to set **SION** in the
-*mux* register, which forces the pad's input path on. I2C needs that, because the
-controller reads back the line it is driving. The register on the board
+The i.MX pinctrl driver treats it as a request to set **SION** in the *mux*
+register, which forces the pad's input path on, and strips it from the pad
+value (`IMX_PAD_SION` in `drivers/pinctrl/freescale/pinctrl-imx.c`).
+I2C needs that, because the controller reads back the line it is driving. The register on the board
 confirms it: the mux reads `0x10`, ALT0 plus SION.
 
 ### Checking it on the board
@@ -374,6 +375,98 @@ in the live tree.
 
 ---
 
+## 6. A graph that is only half a graph: the camera pipeline
+
+The board's camera path shows the cost of section 1's replaced nodes. On this
+board the NXP camera kit attaches to the CSI1 connector: an onsemi AP1302
+image signal processor with an AR0144 sensor behind it, sending YUV over four
+MIPI lanes to the SoC's CSI receiver, which feeds the ISI.
+
+The first link is a standard OF graph. Each end names the other:
+
+```dts
+ap1302_0: ap1302_mipi_0@3c {                 /* on I2C2 */
+	…
+	ports {
+		port@2 {
+			reg = <2>;
+			isp_out_0: endpoint {
+				remote-endpoint = <&mipi_csi0_ep>;
+				data-lanes = <1 2 3 4>;
+				clock-lanes = <0>;
+			};
+		};
+	};
+};
+
+&mipi_csi_0 {
+	port {
+		mipi_csi0_ep: endpoint {
+			remote-endpoint = <&isp_out_0>;
+			data-lanes = <4>;
+			…
+		};
+	};
+};
+```
+
+The second link is not a graph at all. NXP's capture dtsi, having deleted the
+SoC file's CSI and ISI nodes, redefines the ISI without any ports. Its input is
+chosen by a vendor property and its number by an alias:
+
+```dts
+aliases {
+	isi0 = &isi_0;
+	csi0 = &mipi_csi_0;
+};
+
+isi_0: isi@32e00000 {
+	compatible = "nxp,imx8mp-isi", "nxp,imx8mn-isi";
+	interface = <2 0 2>;
+	…
+};
+```
+
+`interface` appears in no binding document; it is read only by NXP's staging
+media drivers (`drivers/staging/media/imx/imx8-isi-core.c` and
+`imx8-media-dev.c`), as three integers whose meaning the code does not spell
+out. Even the two `data-lanes` properties above disagree in form: a list of
+lanes on the sensor side, a lane count on NXP's CSI side. For this half of the
+pipeline the generic media bindings do not apply, and the reference is the
+vendor driver.
+
+### What the board builds without a sensor
+
+Neither camera connector is populated. The dts expects an ADP5585 I/O expander
+at I2C2 address 0x34 to switch the camera's power rails; it is not on the
+board's schematic, so it presumably sits on the camera module itself, and it is
+absent with it. The boot log shows each piece
+probing on its own and the whole failing to form:
+
+```
+mxc-mipi-csi2-sam 32e40000.csi: lanes: 4, …          CSI receiver: probed
+: mipi_csis_imx8mp_phy_reset, No remote pad found!   … with nothing upstream
+mxc-isi_v1 32e00000.isi: mxc_isi.0 registered        ISI: probed
+mx8-img-md: Registered mxc_isi.0.capture as /dev/video3
+mx8-img-md: Unregistered all entities                media device: torn down
+   (the last two lines repeat six times)
+```
+
+`devices_deferred` gives the reason in the usual upstream order: the missing
+expander, then four regulators waiting for it, then the AP1302 waiting for a
+regulator, then the media device. Each time deferred probing retried, the
+media driver registered the capture node, found the sensor's subdevice absent,
+and removed everything again. No `/dev/media0` exists, and the three
+`/dev/video*` nodes that do exist are the VPU's encoder and decoder and the
+ISI's memory-to-memory device, not a camera.
+
+The lesson generalises: the CSI receiver and the ISI were both healthy, and
+the pipeline still did not exist, because one endpoint of the graph had no
+driver. Counting `/dev/video*` nodes says nothing about whether a camera came
+up; their names and drivers do.
+
+---
+
 ## Checks used
 
 | Question | Command |
@@ -386,3 +479,4 @@ in the live tree.
 | What mux value is set? | The register: `md.l` in U-Boot, `/unit_tests/memtool` in Linux |
 | Why is a device missing? | The first hard error in `dmesg`; `devices_deferred` lists the consequences |
 | What did the kernel receive? | `/sys/firmware/fdt`, decompiled and compared |
+| What is each video node? | `cat /sys/class/video4linux/video*/name`, and the driver behind `device/` |
