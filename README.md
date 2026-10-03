@@ -108,6 +108,11 @@ says so.
 - [`00-vendor-bsp-baseline.md`](docs/00-vendor-bsp-baseline.md) — NXP's BSP
   built and booted unmodified: boot chain, boot time, and what went wrong
   getting there
+- [`01-device-tree.md`](docs/01-device-tree.md) — where the board's device
+  tree comes from and four changes to it, each checked on the board: pins read
+  down to the IOMUXC registers, one misconfigured on purpose, an overlay
+  applied at build time and in U-Boot, and what U-Boot adds before the kernel
+  sees the tree
 
 **Reference**
 
@@ -172,6 +177,16 @@ from the vendor setup script's `root-login-with-empty-password` fragment.
 
 Week 5 of 12 — see the roadmap above. Issues and corrections are welcome,
 particularly on anything an ADR marks as unresolved.
+
+## Commits
+
+From 2026-10-03, commits are signed off (`git commit -s`) under the
+[Developer Certificate of Origin](https://developercertificate.org/), as
+OpenEmbedded layers expect. Earlier commits predate this rule.
+
+Kernel and U-Boot patches under `recipes-*/` carry their own
+`Signed-off-by` and an `Upstream-Status` line. `do_patch` rejects a patch
+without `Upstream-Status`.
 
 ## Licence
 
