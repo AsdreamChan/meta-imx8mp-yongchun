@@ -1,0 +1,66 @@
+From 058d7790ff0ae6b9334c4136e60842c405c79998 Mon Sep 17 00:00:00 2001
+From: AsdreamChan <53651187+AsdreamChan@users.noreply.github.com>
+Date: Thu, 1 Oct 2026 11:16:26 +0800
+Subject: [PATCH] arm64: dts: imx8mp-frdm: add an HD44780 LCD behind a PCF8574
+ on I2C3
+
+Describe a 16x2 character LCD attached to the expansion header's I2C3
+pins through a PCF8574 I2C backpack. The expander is registered as a
+GPIO controller, and the hd44780 auxdisplay driver takes its control
+and data lines from it, exposing the display as /dev/lcd.
+
+The backpack wiring follows the layout in the hit,hd44780 binding
+example: P0 RS, P1 RW, P2 E, P3 backlight, P4-P7 D4-D7.
+
+This is add-on hardware rather than part of the board and belongs in
+an overlay. It is carried in the base dts for the first bring-up and
+will move to an overlay later.
+
+Upstream-Status: Inappropriate [configuration]
+Signed-off-by: AsdreamChan <53651187+AsdreamChan@users.noreply.github.com>
+---
+ arch/arm64/boot/dts/freescale/imx8mp-frdm.dts | 21 +++++++++++++++++++
+ 1 file changed, 21 insertions(+)
+
+diff --git a/arch/arm64/boot/dts/freescale/imx8mp-frdm.dts b/arch/arm64/boot/dts/freescale/imx8mp-frdm.dts
+index 51756ed8057f..5b5a7de9f0ce 100644
+--- a/arch/arm64/boot/dts/freescale/imx8mp-frdm.dts
++++ b/arch/arm64/boot/dts/freescale/imx8mp-frdm.dts
+@@ -205,6 +205,20 @@ status {
+ 		};
+ 	};
+ 
++	display-controller {
++		compatible = "hit,hd44780";
++		display-height-chars = <2>;
++		display-width-chars = <16>;
++		data-gpios = <&pcf8574 4 GPIO_ACTIVE_HIGH>,
++			     <&pcf8574 5 GPIO_ACTIVE_HIGH>,
++			     <&pcf8574 6 GPIO_ACTIVE_HIGH>,
++			     <&pcf8574 7 GPIO_ACTIVE_HIGH>;
++		enable-gpios = <&pcf8574 2 GPIO_ACTIVE_HIGH>;
++		rs-gpios = <&pcf8574 0 GPIO_ACTIVE_HIGH>;
++		rw-gpios = <&pcf8574 1 GPIO_ACTIVE_HIGH>;
++		backlight-gpios = <&pcf8574 3 GPIO_ACTIVE_HIGH>;
++	};
++
+ 	reserved-memory {
+ 		#address-cells = <2>;
+ 		#size-cells = <2>;
+@@ -770,6 +784,13 @@ codec: wm8962@1a {
+ 			0x0000 /* 5:Default */
+ 		>;
+ 	};
++
++	pcf8574: gpio-expander@27 {
++		compatible = "nxp,pcf8574";
++		reg = <0x27>;
++		gpio-controller;
++		#gpio-cells = <2>;
++	};
+ };
+ 
+ &hdmi_pavi {
+-- 
+2.43.0
+

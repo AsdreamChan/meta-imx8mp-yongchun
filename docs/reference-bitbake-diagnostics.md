@@ -1,6 +1,6 @@
 # Reference: Diagnosing a BitBake Build
 
-Commands used during weeks 1–5, with the behaviour that made them necessary.
+Commands used during weeks 1–6, with the behaviour that made them necessary.
 Every entry here was run against a real problem; nothing is included for
 completeness.
 
@@ -68,6 +68,18 @@ the append is applied at expansion time, on top of whatever the base is. The
 result is your value plus the vendor's ten entries.
 
 Removing it takes `:remove` with the same override tag.
+
+### `:remove` removes every occurrence
+
+`:remove` matches by value, not by origin. If your base value and the vendor's
+append both contain the same entry, removing the duplicate removes yours as
+well. `KERNEL_DEVICETREE` on this machine lists the jailhouse inmate twice for
+exactly this reason, and the duplicate stays: it is harmless, and the
+alternative is losing the entry altogether.
+
+A change to the machine configuration invalidates the parse cache for every
+recipe. Expect a full reparse, and a rebuild of the kernel and everything
+packaged against it — out-of-tree modules included.
 
 ---
 
@@ -178,6 +190,37 @@ the real user. **`id` is the one that lies.**
 Do not touch anything outside the build tree from a devshell — pseudo's
 database only covers that tree.
 
+**Do not run git inside a devshell.** Under pseudo, git sees the repository
+as owned by someone else and refuses with `detected dubious ownership`. The
+suggested fix, a `safe.directory` exception, would be written to your own
+`~/.gitconfig`, since `HOME` is unchanged. Run git from an ordinary shell
+instead.
+
+### The kernel devshell
+
+```bash
+bitbake -c devshell virtual/kernel
+echo $KBUILD_OUTPUT
+make freescale/<board>.dtb
+```
+
+The devshell exports `KBUILD_OUTPUT`, pointing at the recipe's build
+directory, so a single target builds there without `O=`. Rebuilding one
+device tree takes seconds, against most of an hour for an image.
+
+The source directory is not the recipe's own: it lives in
+`tmp/work-shared/<machine>/kernel-source` and is shared with every recipe
+that builds against the kernel. Anything edited there for an experiment has
+to be put back, and checked from outside the devshell:
+
+```bash
+S=$(bitbake -e virtual/kernel | grep "^S=" | cut -d'"' -f2)
+git -C $S status --short          # must be empty afterwards
+```
+
+`git diff` ignores untracked files. A new file added during an experiment only
+shows after `git add` and `git diff --cached`.
+
 ```bash
 bitbake -c cleansstate <recipe>
 ```
@@ -244,6 +287,27 @@ bitbake -c diffconfig virtual/kernel      # prints the path of the fragment
 `diffconfig` writes a file containing only the delta, with whatever
 dependencies the change pulled in. More reliable than writing `.cfg` by hand.
 
+How it works, from `cml1.bbclass`: `do_menuconfig` copies `.config` to
+`.config.orig` before opening the editor, and `diffconfig` prints the lines
+present in `.config` but not in `.config.orig`. Saving in menuconfig also
+marks `do_compile` as needing to run again, because the new `.config` is newer
+than the one compiled.
+
+**A hand-written fragment must include the parent symbols.** A symbol inside a
+menu that is switched off does not survive the merge:
+
+```
+CONFIG_AUXDISPLAY=y       # without this line…
+CONFIG_HD44780=m          # …this one never reaches .config
+```
+
+Check the result, not the fragment:
+
+```bash
+B=$(bitbake -e virtual/kernel | grep "^B=" | cut -d'"' -f2)
+grep -E "AUXDISPLAY|HD44780" $B/.config
+```
+
 Prefer a fragment over a replacement defconfig. `KBUILD_DEFCONFIG` points at a
 defconfig inside the kernel tree that the vendor maintains; fragments layer on
 top and survive vendor kernel updates.
@@ -277,9 +341,93 @@ git rev-list --count A..B
 commit from the beginning" — in a kernel repository that is over a million
 files written to disk.
 
+```bash
+git format-patch -N vendor..yongchun -o <layer>/recipes-kernel/linux/linux-imx/
+```
+
+`-N` (`--no-numbered`) keeps every subject as `[PATCH]`. Without it, adding a
+second patch rewrites the first file's subject to `[PATCH 1/2]`, and the layer
+history shows a change to a patch whose content did not change.
+
 Patching the kernel changes its local version, because `kernel-yocto` commits
 patches into the kernel's own git tree and the `-g<hash>` suffix follows. Every
 module's install path under `/lib/modules/<version>/` moves with it.
+
+### Proving the patches reproduce the work tree
+
+```bash
+bitbake -c patch virtual/kernel
+git -C <work-tree> rev-parse yongchun^{tree}
+git -C $S rev-parse HEAD^{tree}
+```
+
+A tree hash covers every file's content and nothing else — not commit
+messages, authors or dates. Equal hashes mean the recipe's patched source is
+byte-for-byte the tree that was tested by hand, which is a stronger claim than
+"the patches applied".
+
+---
+
+## Device trees
+
+### What was actually built
+
+```bash
+D=tmp/deploy/images/<machine>
+DTC=tmp/sysroots-components/x86_64/dtc-native/usr/bin/dtc
+$DTC -I dtb -O dts $D/<board>.dtb 2>/dev/null | grep -c '"<compatible>"'
+```
+
+Search for a compatible string, not a node name. Node names repeat:
+`display-controller` is also the name of the SoC's display engine nodes, and
+counting it said nothing about the one that mattered.
+
+### Overlays
+
+| Check | Why |
+|---|---|
+| `grep -c '__symbols__ {'` on the base dtb | Applying an overlay resolves its external labels (`&i2c3`) through the base's `__symbols__`. No symbols, no overlay |
+| Phandles in the merged tree | Every reference to a node the overlay added must carry that node's `phandle` value. This is the proof the merge connected things, more direct than the presence of any one node |
+| Property order | After a merge the overlay's properties come out in reverse order. Find properties by name; `grep -A` after the last one finds nothing |
+
+An overlay built by the kernel carries `__fixups__` and `__local_fixups__`
+but no `__symbols__`: the kernel build adds `-@` only to the dtbs used as
+the base of a composite target. (This is inferred from the output, not
+confirmed in the kernel's makefiles.) Its labels therefore do not survive into
+the merged tree, and a second overlay cannot refer to them.
+
+A composite target (`<name>-dtbs := base.dtb overlay.dtbo` in the kernel
+Makefile) runs the merge at build time. Applying the same `.dtbo` in U-Boot
+at boot gave an identical tree — same phandle numbers, same property order —
+since both use libfdt's overlay code.
+
+### In U-Boot
+
+```
+help fdt                 # `fdt help` aborts when no working address is set
+```
+
+There are no pipes in U-Boot's shell. `setenv` without `saveenv` lasts one
+boot, which is what an experiment wants.
+
+The board's `mmcboot` loads the device tree itself, so it cannot be used after
+a manual `fdt apply`: it would load the base again over the merged one. The
+steps it performs have to be run by hand up to `booti`:
+
+```
+run loadimage
+run loadfdt
+fdt addr ${fdt_addr_r}
+fdt resize 4096
+fatload mmc ${mmcdev}:${mmcpart} <free address> <overlay>.dtbo
+fdt apply <free address>
+run mmcargs
+booti ${loadaddr} - ${fdt_addr_r}
+```
+
+The overlay's address has to clear the kernel image (`loadaddr` plus its size)
+and the resized base. If `fdt apply` fails, the base in memory may already be
+modified; load it again rather than boot it.
 
 ## After the fact
 
@@ -290,6 +438,10 @@ module's install path under `/lib/modules/<version>/` moves with it.
 
 Both survive a lost terminal. Neither survives deleting `tmp/`.
 
+In buildstats, a recipe whose only entries are `*_setscene` tasks was restored
+from shared state, not rebuilt. Count the real tasks before concluding that a
+change caused a recipe to compile again.
+
 ---
 
 ## On the board
@@ -298,8 +450,14 @@ Both survive a lost terminal. Neither survives deleting `tmp/`.
 |---|---|
 | `systemd-analyze` | Kernel and userspace split, and the target reached |
 | `systemd-analyze blame` | Per-unit times, slowest first |
-| `i2cdetect -y -r <bus>` | `--` means nothing responds at that address; `UU` means a driver holds it |
+| `i2cdetect -y -r <bus>` | `--` means nothing responds at that address; a number means something responds and no driver holds it; `UU` means a driver holds it |
 | `dmesg \| grep -i "deferred probe"` | Probes waiting on a supplier |
+| `cat /sys/kernel/debug/devices_deferred` | Every device still deferred, with the supplier it waits for |
+| `/sys/kernel/debug/pinctrl/*/pinmux-pins` | Which device claimed each pin, through which group. **Not** the mux value: a pin configured to the wrong function still shows as claimed by the right device |
+
+`i2cdetect` on the same bus across boots is a cheap control. A device that
+shows its address with one device tree and `UU` with another proves the
+difference is the description, not the wiring.
 
 **`.device` units are waiting; `.service` units are working.** A storage
 device unit taking three and a half seconds is the card becoming ready, and no
@@ -322,3 +480,17 @@ adp5585 1-0034: error -ENXIO: Failed to read device ID        ← root
 
 The least informative line — `(reason unknown)` — belongs to the node furthest
 downstream. Read upward.
+
+The root is often not a deferral at all but a hard failure, and its errno says
+what kind:
+
+```
+pcf857x 2-0027: probe with driver pcf857x failed with error -110   ← root: ETIMEDOUT
+wm8962 2-001a: probe with driver wm8962 failed with error -110     ← same bus, same cause
+```
+
+Here the bus itself was dead (a pin muxed to the wrong function), so every
+device on it timed out, and the devices depending on them were deferred.
+`devices_deferred` lists only the victims. An `-ENXIO` instead — the code a missing
+acknowledgement produced in the drivers seen so far — points at a single device
+not answering on a working bus.

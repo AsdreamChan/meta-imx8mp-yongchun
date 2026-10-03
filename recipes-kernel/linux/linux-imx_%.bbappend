@@ -25,3 +25,13 @@ SRC_URI += "file://can-usb.cfg"
 # kernel work tree keeps a vendor branch pinned at lf-6.18.20-2.0.0 and a
 # yongchun branch on top; format-patch regenerates this file after a rebase.
 SRC_URI += "file://0001-arm64-dts-imx8mp-frdm-drive-the-status-LED-from-the-.patch"
+SRC_URI += "file://0002-arm64-dts-imx8mp-frdm-add-an-HD44780-LCD-behind-a-PC.patch"
+SRC_URI += "file://0003-arm64-dts-imx8mp-frdm-move-the-HD44780-LCD-to-an-ove.patch"
+SRC_URI += "file://0004-arm64-dts-imx8mp-frdm-add-an-external-LED-on-GPIO1_I.patch"
+
+# HD44780 16x2 character LCD behind a PCF8574 I2C backpack, for the
+# sprint 6 device tree work. AUXDISPLAY is only the menu gate and adds
+# no code, but HD44780 is skipped without it. GPIO_PCF857X is already
+# set by the vendor defconfig; it is listed so the dependency survives
+# a defconfig change. HD44780_COMMON is selected, so it is not listed.
+SRC_URI += "file://hd44780.cfg"

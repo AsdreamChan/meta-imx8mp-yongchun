@@ -1,0 +1,124 @@
+From c619d9c691d4dfcc79fb28cdd4eba121d6a12750 Mon Sep 17 00:00:00 2001
+From: AsdreamChan <53651187+AsdreamChan@users.noreply.github.com>
+Date: Fri, 2 Oct 2026 20:40:14 +0800
+Subject: [PATCH] arm64: dts: imx8mp-frdm: move the HD44780 LCD to an overlay
+
+The LCD and its PCF8574 backpack are add-on hardware on the expansion
+header, not part of the board. Kept in the base dts, every boot without
+the LCD attached probes an expander that is not there and leaves the
+display node deferred.
+
+Move both nodes into imx8mp-frdm-lcd1602.dtso. It is built twice: as a
+standalone .dtbo for U-Boot to apply at boot, and as the composite
+imx8mp-frdm-lcd1602.dtb, whose build runs fdtoverlay and so fails if
+the overlay stops applying to the base.
+
+Upstream-Status: Inappropriate [configuration]
+Signed-off-by: AsdreamChan <53651187+AsdreamChan@users.noreply.github.com>
+---
+ arch/arm64/boot/dts/freescale/Makefile        |  3 ++
+ .../dts/freescale/imx8mp-frdm-lcd1602.dtso    | 38 +++++++++++++++++++
+ arch/arm64/boot/dts/freescale/imx8mp-frdm.dts | 21 ----------
+ 3 files changed, 41 insertions(+), 21 deletions(-)
+ create mode 100644 arch/arm64/boot/dts/freescale/imx8mp-frdm-lcd1602.dtso
+
+diff --git a/arch/arm64/boot/dts/freescale/Makefile b/arch/arm64/boot/dts/freescale/Makefile
+index bb6bc733c7e5..8230a0770e48 100644
+--- a/arch/arm64/boot/dts/freescale/Makefile
++++ b/arch/arm64/boot/dts/freescale/Makefile
+@@ -447,6 +447,9 @@ dtb-$(CONFIG_ARCH_MXC) += imx8mp-frdm-root.dtb
+ imx8mp-frdm-waveshare-7inch-c-panel-dtbs := imx8mp-frdm.dtb imx8mp-frdm-waveshare-7inch-c-panel.dtbo
+ dtb-${CONFIG_ARCH_MXC} += imx8mp-frdm-waveshare-7inch-c-panel.dtb
+ 
++imx8mp-frdm-lcd1602-dtbs := imx8mp-frdm.dtb imx8mp-frdm-lcd1602.dtbo
++dtb-${CONFIG_ARCH_MXC} += imx8mp-frdm-lcd1602.dtb
++
+ imx8mq-evk-pcie1-ep-dtbs += imx8mq-evk.dtb imx-pcie1-ep.dtbo
+ dtb-$(CONFIG_ARCH_MXC) += imx8mq-evk-pcie1-ep.dtb
+ 
+diff --git a/arch/arm64/boot/dts/freescale/imx8mp-frdm-lcd1602.dtso b/arch/arm64/boot/dts/freescale/imx8mp-frdm-lcd1602.dtso
+new file mode 100644
+index 000000000000..1516b11a5095
+--- /dev/null
++++ b/arch/arm64/boot/dts/freescale/imx8mp-frdm-lcd1602.dtso
+@@ -0,0 +1,38 @@
++// SPDX-License-Identifier: (GPL-2.0+ OR MIT)
++/*
++ * HD44780 16x2 character LCD behind a PCF8574 I2C backpack,
++ * wired to the expansion header's I2C3 pins.
++ */
++
++/dts-v1/;
++/plugin/;
++
++#include <dt-bindings/gpio/gpio.h>
++
++&i2c3 {
++	#address-cells = <1>;
++        #size-cells = <0>;
++
++	pcf8574: gpio-expander@27 {
++		compatible = "nxp,pcf8574";
++		reg = <0x27>;
++		gpio-controller;
++		#gpio-cells = <2>;
++	};
++};
++
++&{/} {
++	display-controller {
++		compatible = "hit,hd44780";
++		display-height-chars = <2>;
++		display-width-chars = <16>;
++		data-gpios = <&pcf8574 4 GPIO_ACTIVE_HIGH>,
++			     <&pcf8574 5 GPIO_ACTIVE_HIGH>,
++			     <&pcf8574 6 GPIO_ACTIVE_HIGH>,
++			     <&pcf8574 7 GPIO_ACTIVE_HIGH>;
++		enable-gpios = <&pcf8574 2 GPIO_ACTIVE_HIGH>;
++		rs-gpios = <&pcf8574 0 GPIO_ACTIVE_HIGH>;
++		rw-gpios = <&pcf8574 1 GPIO_ACTIVE_HIGH>;
++		backlight-gpios = <&pcf8574 3 GPIO_ACTIVE_HIGH>;
++	};
++};
+diff --git a/arch/arm64/boot/dts/freescale/imx8mp-frdm.dts b/arch/arm64/boot/dts/freescale/imx8mp-frdm.dts
+index 5b5a7de9f0ce..51756ed8057f 100644
+--- a/arch/arm64/boot/dts/freescale/imx8mp-frdm.dts
++++ b/arch/arm64/boot/dts/freescale/imx8mp-frdm.dts
+@@ -205,20 +205,6 @@ status {
+ 		};
+ 	};
+ 
+-	display-controller {
+-		compatible = "hit,hd44780";
+-		display-height-chars = <2>;
+-		display-width-chars = <16>;
+-		data-gpios = <&pcf8574 4 GPIO_ACTIVE_HIGH>,
+-			     <&pcf8574 5 GPIO_ACTIVE_HIGH>,
+-			     <&pcf8574 6 GPIO_ACTIVE_HIGH>,
+-			     <&pcf8574 7 GPIO_ACTIVE_HIGH>;
+-		enable-gpios = <&pcf8574 2 GPIO_ACTIVE_HIGH>;
+-		rs-gpios = <&pcf8574 0 GPIO_ACTIVE_HIGH>;
+-		rw-gpios = <&pcf8574 1 GPIO_ACTIVE_HIGH>;
+-		backlight-gpios = <&pcf8574 3 GPIO_ACTIVE_HIGH>;
+-	};
+-
+ 	reserved-memory {
+ 		#address-cells = <2>;
+ 		#size-cells = <2>;
+@@ -784,13 +770,6 @@ codec: wm8962@1a {
+ 			0x0000 /* 5:Default */
+ 		>;
+ 	};
+-
+-	pcf8574: gpio-expander@27 {
+-		compatible = "nxp,pcf8574";
+-		reg = <0x27>;
+-		gpio-controller;
+-		#gpio-cells = <2>;
+-	};
+ };
+ 
+ &hdmi_pavi {
+-- 
+2.43.0
+
