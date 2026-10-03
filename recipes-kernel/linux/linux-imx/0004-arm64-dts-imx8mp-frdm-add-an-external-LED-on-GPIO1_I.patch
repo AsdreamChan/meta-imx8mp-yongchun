@@ -1,0 +1,62 @@
+From 1240cc64f664d5e55b43cf75a6dcbe538a760b39 Mon Sep 17 00:00:00 2001
+From: AsdreamChan <53651187+AsdreamChan@users.noreply.github.com>
+Date: Sat, 3 Oct 2026 10:44:48 +0800
+Subject: [PATCH] arm64: dts: imx8mp-frdm: add an external LED on GPIO1_IO07
+
+Drive an LED wired to pin 16 of the J18 expansion header from
+gpio-leds. GPIO1_IO07 sits in the NVCC_GPIO1 bank, which the board
+supplies at 3.3 V, so the pad drives the LED directly through a
+series resistor.
+
+Give the pad its own pinctrl group rather than relying on the reset
+state. The reset mux already selects GPIO, but the pad configuration
+is now explicit: no pull, CMOS input, slow slew, push-pull, DSE X6.
+
+The gpio-leds node already names a "default" state without a
+pinctrl-0; point it at the new group.
+
+Upstream-Status: Inappropriate [configuration]
+Signed-off-by: AsdreamChan <53651187+AsdreamChan@users.noreply.github.com>
+---
+ arch/arm64/boot/dts/freescale/imx8mp-frdm.dts | 13 +++++++++++++
+ 1 file changed, 13 insertions(+)
+
+diff --git a/arch/arm64/boot/dts/freescale/imx8mp-frdm.dts b/arch/arm64/boot/dts/freescale/imx8mp-frdm.dts
+index 51756ed8057f..7d5347273b10 100644
+--- a/arch/arm64/boot/dts/freescale/imx8mp-frdm.dts
++++ b/arch/arm64/boot/dts/freescale/imx8mp-frdm.dts
+@@ -198,11 +198,18 @@ K1: user_btn1 {
+ 	gpio-leds {
+ 		compatible = "gpio-leds";
+ 		pinctrl-names = "default";
++		pinctrl-0 = <&pinctrl_gpio_led>;
+ 		status {
+ 			label = "status";
+ 			gpio = <&pca6416_a 14 GPIO_ACTIVE_HIGH>;
+ 			linux,default-trigger = "heartbeat";
+ 		};
++
++		led-ext {
++			label = "ext";
++			gpios = <&gpio1 7 GPIO_ACTIVE_HIGH>;
++			default-state = "off";
++		};
+ 	};
+ 
+ 	reserved-memory {
+@@ -1095,6 +1102,12 @@ MX8MP_IOMUXC_NAND_DATA03__FLEXSPI_A_DATA03	  0x82
+ 		>;
+ 	};
+ 
++	pinctrl_gpio_led: gpioledgrp {
++		fsl,pins = <
++			MX8MP_IOMUXC_GPIO1_IO07__GPIO1_IO07	0x6
++		>;
++	};
++
+ 	pinctrl_hog: hoggrp {
+ 		fsl,pins = <
+ 			MX8MP_IOMUXC_HDMI_DDC_SCL__HDMIMIX_HDMI_SCL	0x400001c2
+-- 
+2.43.0
+

@@ -27,6 +27,7 @@ SRC_URI += "file://can-usb.cfg"
 SRC_URI += "file://0001-arm64-dts-imx8mp-frdm-drive-the-status-LED-from-the-.patch"
 SRC_URI += "file://0002-arm64-dts-imx8mp-frdm-add-an-HD44780-LCD-behind-a-PC.patch"
 SRC_URI += "file://0003-arm64-dts-imx8mp-frdm-move-the-HD44780-LCD-to-an-ove.patch"
+SRC_URI += "file://0004-arm64-dts-imx8mp-frdm-add-an-external-LED-on-GPIO1_I.patch"
 
 # HD44780 16x2 character LCD behind a PCF8574 I2C backpack, for the
 # sprint 6 device tree work. AUXDISPLAY is only the menu gate and adds
