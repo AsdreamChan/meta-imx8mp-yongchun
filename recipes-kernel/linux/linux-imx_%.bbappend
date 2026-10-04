@@ -35,3 +35,17 @@ SRC_URI += "file://0004-arm64-dts-imx8mp-frdm-add-an-external-LED-on-GPIO1_I.pat
 # set by the vendor defconfig; it is listed so the dependency survives
 # a defconfig change. HD44780_COMMON is selected, so it is not listed.
 SRC_URI += "file://hd44780.cfg"
+
+# Dynamic debug and ftrace, for the sprint 7 driver work. The vendor
+# defconfig sets neither. DYNAMIC_DEBUG needs DEBUG_FS or PROC_FS for
+# its control file; DEBUG_FS is already set. This changes the kernel
+# that boot time is measured on: numbers taken with it are not
+# comparable with the sprint 5 baseline.
+SRC_URI += "file://debug.cfg"
+
+# vivid, the kernel's virtual capture driver, as a known-good V4L2
+# source to compare the sprint 7 driver against. The vendor defconfig
+# sets MEDIA_SUPPORT_FILTER, which leaves MEDIA_TEST_SUPPORT off, and
+# drivers/media/Kconfig sources test-drivers/Kconfig only under it, so
+# both menu gates are listed or VIDEO_VIVID is dropped.
+SRC_URI += "file://vivid.cfg"
