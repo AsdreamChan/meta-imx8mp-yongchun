@@ -1,0 +1,21 @@
+// SPDX-License-Identifier: GPL-2.0-only
+/*
+ * Two test pattern generators at different rates, for the sprint 7
+ * driver. Built by hand with the kernel's dtc and applied in U-Boot
+ * while the driver is being written; not part of the image yet.
+ */
+
+/dts-v1/;
+/plugin/;
+
+&{/} {
+	tpg-30hz {
+		compatible = "yongchun,tpg";
+		yongchun,frame-interval = <1 30>;
+	};
+
+	tpg-9hz {
+		compatible = "yongchun,tpg";
+		yongchun,frame-interval = <1 9>;
+	};
+};
