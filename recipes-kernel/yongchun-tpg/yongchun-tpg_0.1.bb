@@ -1,7 +1,7 @@
-SUMMARY = "Test pattern generator for the sprint 7 V4L2 driver work"
-DESCRIPTION = "An out-of-tree platform driver that binds to yongchun,tpg \
-device tree nodes. It reads each node's frame interval; the V4L2 capture \
-side follows in a later step."
+SUMMARY = "Test pattern generator V4L2 capture driver"
+DESCRIPTION = "An out-of-tree V4L2 capture driver: one /dev/videoN per \
+yongchun,tpg device tree node, producing YUYV colour bars at the frame \
+interval the node gives, paced by an hrtimer."
 LICENSE = "GPL-2.0-only"
 LIC_FILES_CHKSUM = "file://${COMMON_LICENSE_DIR}/GPL-2.0-only;md5=801f80980d171dd6425610833a22dbe6"
 
