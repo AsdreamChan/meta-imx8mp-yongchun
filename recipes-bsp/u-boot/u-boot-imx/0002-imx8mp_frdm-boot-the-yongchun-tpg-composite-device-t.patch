@@ -1,0 +1,37 @@
+From 61f25dda19c90602cbfc8be3181bf8d71b063b8d Mon Sep 17 00:00:00 2001
+From: AsdreamChan <53651187+AsdreamChan@users.noreply.github.com>
+Date: Wed, 7 Oct 2026 12:05:54 +0800
+Subject: [PATCH] imx8mp_frdm: boot the yongchun-tpg composite device tree by
+ default
+
+The yongchun image ships imx8mp-frdm-tpg.dtb, the board's tree with the
+two yongchun,tpg test devices merged in at build time. Make it the
+default fdtfile so the devices exist at boot and their driver loads
+without a hand-applied overlay.
+
+imx8mp-frdm.dtb is still on the boot partition; `setenv fdtfile
+imx8mp-frdm.dtb; boot` at the prompt boots the plain tree.
+
+Upstream-Status: Inappropriate [yongchun-specific default]
+
+Signed-off-by: AsdreamChan <53651187+AsdreamChan@users.noreply.github.com>
+---
+ configs/imx8mp_frdm_defconfig | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/configs/imx8mp_frdm_defconfig b/configs/imx8mp_frdm_defconfig
+index 452db481..18065bb0 100644
+--- a/configs/imx8mp_frdm_defconfig
++++ b/configs/imx8mp_frdm_defconfig
+@@ -38,7 +38,7 @@ CONFIG_OF_BOARD_FIXUP=y
+ CONFIG_OF_BOARD_SETUP=y
+ CONFIG_OF_SYSTEM_SETUP=y
+ CONFIG_BOOTCOMMAND="run sr_ir_v2_cmd;bootflow scan -lb; run bsp_bootcmd"
+-CONFIG_DEFAULT_FDT_FILE="imx8mp-frdm.dtb"
++CONFIG_DEFAULT_FDT_FILE="imx8mp-frdm-tpg.dtb"
+ CONFIG_ARCH_MISC_INIT=y
+ CONFIG_BOARD_EARLY_INIT_F=y
+ CONFIG_BOARD_LATE_INIT=y
+-- 
+2.43.0
+
