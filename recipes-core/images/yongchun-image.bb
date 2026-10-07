@@ -15,4 +15,11 @@ DOCKER:mx8-nxp-bsp = ""
 # here makes it a hard dependency.
 IMAGE_INSTALL += "v4l-utils media-ctl kernel-module-vivid"
 
+# The test pattern generator for the V4L2 driver work. The device tree
+# nodes come from the default imx8mp-frdm-tpg.dtb, and udev loads the
+# module by modalias at boot. The recipe name, not kernel-module-yongchun-tpg:
+# that name only exists after packaging, and at parse time bitbake resolves
+# kernel-module-* to the kernel recipe through its PACKAGES_DYNAMIC.
+IMAGE_INSTALL += "yongchun-tpg"
+
 export IMAGE_BASENAME = "yongchun-image"
