@@ -49,3 +49,12 @@ SRC_URI += "file://debug.cfg"
 # drivers/media/Kconfig sources test-drivers/Kconfig only under it, so
 # both menu gates are listed or VIDEO_VIVID is dropped.
 SRC_URI += "file://vivid.cfg"
+
+# meta-imx sets LOCALVERSION directly, which kernel.bbclass exports for the
+# kernel's own build. KERNEL_LOCALVERSION stays empty, and that is what
+# do_shared_workdir saves for make-mod-scripts, whose `make prepare` then
+# rewrites kernel.release in kernel-build-artifacts without "-2.0.0".
+# Out-of-tree modules, NXP's included, got a vermagic that differs from
+# uname -r and loaded only because MODVERSIONS skips the release string.
+KERNEL_LOCALVERSION = "${LOCALVERSION}"
+
