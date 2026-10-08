@@ -51,6 +51,9 @@ SRC_URI += "file://debug.cfg"
 # both menu gates are listed or VIDEO_VIVID is dropped.
 SRC_URI += "file://vivid.cfg"
 
+SRC_URI += "file://iio-bmp280.cfg"
+SRC_URI += "file://can-vcan.cfg"
+
 # meta-imx sets LOCALVERSION directly, which kernel.bbclass exports for the
 # kernel's own build. KERNEL_LOCALVERSION stays empty, and that is what
 # do_shared_workdir saves for make-mod-scripts, whose `make prepare` then
