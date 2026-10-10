@@ -12,4 +12,3 @@ SRC_URI = "file://Makefile \
           "
 
 S = "${UNPACKDIR}"
-

@@ -181,4 +181,3 @@ What the spike showed has to be in the layer, and what it did not test:
 - `sources/build-logs/imx8mp/2026-10-09-base-dtb-boot.md` — the `CONFIG_BOOTCOMMAND` sequence and the fallback to `bsp_bootcmd`
 - `sources/build-logs/imx8mp/2026-10-08-bmp280-mainline-iio.md` — the BMP280 bring-up and the manual overlay
 - `sources/build-logs/imx8mp/2026-10-08-bmp280-mainline-iio-addendum.md` §4a — `opteeoverlay`
-
