@@ -51,7 +51,13 @@ SRC_URI += "file://debug.cfg"
 # both menu gates are listed or VIDEO_VIVID is dropped.
 SRC_URI += "file://vivid.cfg"
 
+# The BMP280 pressure and temperature sensor on I2C3, through the mainline
+# IIO driver, for the sprint 7 IIO work. BMP280 selects both bus front ends,
+# BMP280_I2C and BMP280_SPI, so both modules are built.
 SRC_URI += "file://iio-bmp280.cfg"
+
+# vcan, the virtual CAN interface, for the sprint 8 SocketCAN work. The
+# vendor defconfig builds the CAN core and FlexCAN as modules, not vcan.
 SRC_URI += "file://can-vcan.cfg"
 
 # meta-imx sets LOCALVERSION directly, which kernel.bbclass exports for the
@@ -61,4 +67,3 @@ SRC_URI += "file://can-vcan.cfg"
 # Out-of-tree modules, NXP's included, got a vermagic that differs from
 # uname -r and loaded only because MODVERSIONS skips the release string.
 KERNEL_LOCALVERSION = "${LOCALVERSION}"
-
