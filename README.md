@@ -136,6 +136,10 @@ says so.
   and why that had to be decided before the layer had any content
 - [ADR-0005](docs/adr/0005-carrying-vendor-patches.md) — local changes as a
   patch series, with an upgrade rehearsal across seventeen stable releases
+- [ADR-0006](docs/adr/0006-boot-device-tree-selection.md) — the board boots a
+  composite device tree, chosen by one line of U-Boot's defconfig
+- [ADR-0007](docs/adr/0007-sensor-overlays-at-boot.md) — pluggable sensors as
+  overlays listed in extlinux.conf; tried by hand on the board, not yet built
 
 Corrections are marked where they are made. ADR-0002 claimed NXP's setup
 script does not use configuration fragments; it does, and the record says so
