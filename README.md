@@ -82,17 +82,26 @@ together.
 conf/
   layer.conf                  priority 10, above meta-imx-bsp (8) and meta-freescale (5)
   distro/yongchun.conf        no qt, no xen, no display stack; jailhouse kept
-  machine/yongchun.conf       FRDM derivative; device trees trimmed from 11 to 2
+  machine/yongchun.conf       FRDM derivative; vendor device trees trimmed from 11 to 2, plus two overlays and their composites
 recipes-core/images/
-  yongchun-image.bb           requires imx-image-core; drops docker
+  yongchun-image.bb           requires imx-image-core; drops docker; adds v4l-utils and yongchun-tpg
 recipes-kernel/linux/
   linux-imx_%.bbappend
-  linux-imx/can-isotp.cfg     CONFIG_CAN_ISOTP=m
+  linux-imx/*.cfg             fragments: CAN ISO-TP, HD44780, debug, vivid, BMP280, vcan
   linux-imx/0001-*.patch      device tree: status LED on the heartbeat trigger
+  linux-imx/0002-*.patch      device tree: HD44780 LCD behind a PCF8574 on I2C3
+  linux-imx/0003-*.patch      device tree: the LCD moved to an overlay
+  linux-imx/0004-*.patch      device tree: external LED on GPIO1_IO07
+  linux-imx/0005-*.patch      device tree: overlay and composite for the yongchun-tpg test devices
+recipes-kernel/yongchun-tpg/  out-of-tree V4L2 test pattern driver, loaded by modalias at boot
 recipes-bsp/u-boot/
   u-boot-imx_%.bbappend
   u-boot-imx/0001-*.patch     defconfig: autoboot delay
+  u-boot-imx/0002-*.patch     defconfig: boot the yongchun-tpg composite by default
+scripts/
+  yuyv2png.py                 one raw YUYV frame to PNG, standard library only
 docs/
+  adr/                        architecture decision records
 ```
 
 ## Documentation
