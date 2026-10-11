@@ -76,6 +76,19 @@ default to `nproc` and they multiply — on a sixteen-core machine that is up to
 while `rust-native`, `clang-native`, `qtbase`, `boost` and `gcc` compile
 together.
 
+## Tests
+
+`tests/` checks the Sprint 7 driver on a running board over SSH: the module
+unloads, loads with both devices bound, and loads again by modalias after a
+reboot. It needs [uv](https://docs.astral.sh/uv/) and key-based SSH to the
+board as root.
+
+```
+cd tests
+uv run pytest -v --board root@<board-ip>    # all three, about 35 s
+uv run pytest -v -m "not slow"              # skip the reboot
+```
+
 ## Layout
 
 ```
@@ -100,6 +113,7 @@ recipes-bsp/u-boot/
   u-boot-imx/0002-*.patch     defconfig: boot the yongchun-tpg composite by default
 scripts/
   yuyv2png.py                 one raw YUYV frame to PNG, standard library only
+tests/                        pytest over SSH: unload, load, autoload after reboot
 docs/
   adr/                        architecture decision records
 ```
