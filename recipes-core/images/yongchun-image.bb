@@ -22,4 +22,8 @@ IMAGE_INSTALL += "v4l-utils media-ctl kernel-module-vivid"
 # kernel-module-* to the kernel recipe through its PACKAGES_DYNAMIC.
 IMAGE_INSTALL += "yongchun-tpg"
 
+# The boot partition takes the overlays from yongchun-overlays' deploy
+# directory (IMAGE_BOOT_FILES in the machine conf).
+do_image_wic[depends] += "yongchun-overlays:do_deploy"
+
 export IMAGE_BASENAME = "yongchun-image"
