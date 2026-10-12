@@ -14,7 +14,7 @@ and bootloader as a patch series against the vendor trees.
 | BSP | NXP LF6.18.20_2.0.0, Yocto 6.0 "wrynose" |
 | Machine | `yongchun`, derived from `imx8mp-lpddr4-frdm` |
 | Distro | `yongchun`, based on `fsl-imx-xwayland-minimal`, display stack removed |
-| Image | `yongchun-image` — 268 MB, 1519 packages |
+| Image | `yongchun-image` — 268 MB, 1519 packages (week 5) |
 | Boot | 11.5 s to `multi-user.target` (4.4 s kernel + 7.1 s userspace) |
 
 `yongchun` is the machine codename, after the Yongchun district in Taipei.
@@ -41,7 +41,7 @@ Built over a twelve-week plan. Nothing is claimed before it is built.
 | 1–3 | Yocto fundamentals on a Raspberry Pi 4B | ✅ |
 | 4 | Vendor BSP baseline on FRDM-IMX8MPLUS, boot flow | ✅ |
 | 5 | Custom layer, machine, distro; U-Boot and kernel | ✅ |
-| 6 | Device tree: I2C sensor, pinctrl/IOMUX, GPIO LED, overlays | ⬜ |
+| 6 | Device tree: I2C sensor, pinctrl/IOMUX, GPIO LED, overlays | ✅ |
 | 7 | Out-of-tree kernel driver (IIO), packaged as a recipe | ⬜ |
 | 8 | Productisation: OTA (A/B), boot time, read-only rootfs | ⬜ |
 | 9 | Automotive stack: SocketCAN, UDS server, CP↔Linux comparison | ⬜ |
@@ -202,7 +202,7 @@ from the vendor setup script's `root-login-with-empty-password` fragment.
 
 ## Status
 
-Week 5 of 12 — see the roadmap above. Issues and corrections are welcome,
+Weeks 1–7 done; week 8 in progress — see the roadmap above. Issues and corrections are welcome,
 particularly on anything an ADR marks as unresolved.
 
 ## Commits
