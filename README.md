@@ -95,7 +95,8 @@ uv run pytest -v -m "not slow"              # skip the reboot
 conf/
   layer.conf                  priority 10, above meta-imx-bsp (8) and meta-freescale (5)
   distro/yongchun.conf        no qt, no xen, no display stack; jailhouse kept
-  machine/yongchun.conf       FRDM derivative; vendor device trees trimmed from 11 to 2, plus two overlays and their composites
+  machine/yongchun.conf       FRDM derivative; vendor device trees trimmed from 11 to 2, plus two overlays and their composites;
+                              boots through extlinux.conf, which lists the sensor overlays
 recipes-core/images/
   yongchun-image.bb           requires imx-image-core; drops docker; adds v4l-utils and yongchun-tpg
 recipes-kernel/linux/
@@ -111,6 +112,9 @@ recipes-bsp/u-boot/
   u-boot-imx_%.bbappend
   u-boot-imx/0001-*.patch     defconfig: autoboot delay
   u-boot-imx/0002-*.patch     defconfig: boot the yongchun-tpg composite by default
+  u-boot-imx/0003-*.patch     environment: fdtoverlay_addr_r, so extlinux.conf can apply overlays
+recipes-bsp/yongchun-overlays/
+  yongchun-overlays.bb        device tree overlays for plugged-in modules (BMP280), built outside the kernel
 scripts/
   yuyv2png.py                 one raw YUYV frame to PNG, standard library only
 tests/                        pytest over SSH: unload, load, autoload after reboot
@@ -162,7 +166,8 @@ says so.
 - [ADR-0006](docs/adr/0006-boot-device-tree-selection.md) — the board boots a
   composite device tree, chosen by one line of U-Boot's defconfig
 - [ADR-0007](docs/adr/0007-sensor-overlays-at-boot.md) — pluggable sensors as
-  overlays listed in extlinux.conf; tried by hand on the board, not yet built
+  overlays listed in extlinux.conf; built in week 8, and changing an overlay
+  rebuilds no kernel
 
 Corrections are marked where they are made. ADR-0002 claimed NXP's setup
 script does not use configuration fragments; it does, and the record says so
