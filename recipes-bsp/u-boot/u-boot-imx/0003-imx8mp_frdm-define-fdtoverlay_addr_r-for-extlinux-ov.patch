@@ -1,0 +1,34 @@
+From 3a9e51dcb328c4a30e31f23111963c4f1dbcd5c2 Mon Sep 17 00:00:00 2001
+From: AsdreamChan <53651187+AsdreamChan@users.noreply.github.com>
+Date: Mon, 12 Oct 2026 18:56:26 +0800
+Subject: [PATCH] imx8mp_frdm: define fdtoverlay_addr_r for extlinux overlays
+
+The extlinux parser applies a label's FDTOVERLAYS only when
+fdtoverlay_addr_r is set. Without it, it prints "Invalid
+fdtoverlay_addr_r for loading overlays" and boots with none of them.
+
+Load overlays at 0x43400000: 4 MiB above fdt_addr_r and below
+scriptaddr, the address used when this was tried by hand.
+
+Upstream-Status: Inappropriate [configuration for this layer's extlinux boot]
+
+Signed-off-by: AsdreamChan <53651187+AsdreamChan@users.noreply.github.com>
+---
+ board/nxp/imx8mp_frdm/imx8mp_frdm.env | 1 +
+ 1 file changed, 1 insertion(+)
+
+diff --git a/board/nxp/imx8mp_frdm/imx8mp_frdm.env b/board/nxp/imx8mp_frdm/imx8mp_frdm.env
+index 0f60af42..8e30c64a 100644
+--- a/board/nxp/imx8mp_frdm/imx8mp_frdm.env
++++ b/board/nxp/imx8mp_frdm/imx8mp_frdm.env
+@@ -51,6 +51,7 @@ console=ttymxc1,115200
+ splashimage=0x50000000
+ fdt_addr_r=0x43000000
+ fdt_addr=0x43000000
++fdtoverlay_addr_r=0x43400000
+ fdtfile=CONFIG_DEFAULT_FDT_FILE
+ image=Image
+ ip_dyn=yes
+-- 
+2.43.0
+
