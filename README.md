@@ -14,7 +14,7 @@ and bootloader as a patch series against the vendor trees.
 | BSP | NXP LF6.18.20_2.0.0, Yocto 6.0 "wrynose" |
 | Machine | `yongchun`, derived from `imx8mp-lpddr4-frdm` |
 | Distro | `yongchun`, based on `fsl-imx-xwayland-minimal`, display stack removed |
-| Image | `yongchun-image` — 268 MB, 1519 packages |
+| Image | `yongchun-image` — 268 MB, 1519 packages (week 5) |
 | Boot | 11.5 s to `multi-user.target` (4.4 s kernel + 7.1 s userspace) |
 
 `yongchun` is the machine codename, after the Yongchun district in Taipei.
@@ -41,7 +41,7 @@ Built over a twelve-week plan. Nothing is claimed before it is built.
 | 1–3 | Yocto fundamentals on a Raspberry Pi 4B | ✅ |
 | 4 | Vendor BSP baseline on FRDM-IMX8MPLUS, boot flow | ✅ |
 | 5 | Custom layer, machine, distro; U-Boot and kernel | ✅ |
-| 6 | Device tree: I2C sensor, pinctrl/IOMUX, GPIO LED, overlays | ⬜ |
+| 6 | Device tree: I2C sensor, pinctrl/IOMUX, GPIO LED, overlays | ✅ |
 | 7 | Out-of-tree kernel driver (IIO), packaged as a recipe | ⬜ |
 | 8 | Productisation: OTA (A/B), boot time, read-only rootfs | ⬜ |
 | 9 | Automotive stack: SocketCAN, UDS server, CP↔Linux comparison | ⬜ |
@@ -76,23 +76,46 @@ default to `nproc` and they multiply — on a sixteen-core machine that is up to
 while `rust-native`, `clang-native`, `qtbase`, `boost` and `gcc` compile
 together.
 
+## Tests
+
+`tests/` checks the Sprint 7 driver on a running board over SSH: the module
+unloads, loads with both devices bound, and loads again by modalias after a
+reboot. It needs [uv](https://docs.astral.sh/uv/) and key-based SSH to the
+board as root.
+
+```
+cd tests
+uv run pytest -v --board root@<board-ip>    # all three, about 35 s
+uv run pytest -v -m "not slow"              # skip the reboot
+```
+
 ## Layout
 
 ```
 conf/
   layer.conf                  priority 10, above meta-imx-bsp (8) and meta-freescale (5)
   distro/yongchun.conf        no qt, no xen, no display stack; jailhouse kept
-  machine/yongchun.conf       FRDM derivative; device trees trimmed from 11 to 2
+  machine/yongchun.conf       FRDM derivative; vendor device trees trimmed from 11 to 2, plus two overlays and their composites
 recipes-core/images/
-  yongchun-image.bb           requires imx-image-core; drops docker
+  yongchun-image.bb           requires imx-image-core; drops docker; adds v4l-utils and yongchun-tpg
 recipes-kernel/linux/
   linux-imx_%.bbappend
-  linux-imx/can-isotp.cfg     CONFIG_CAN_ISOTP=m
+  linux-imx/*.cfg             fragments: CAN ISO-TP, HD44780, debug, vivid, BMP280, vcan
   linux-imx/0001-*.patch      device tree: status LED on the heartbeat trigger
+  linux-imx/0002-*.patch      device tree: HD44780 LCD behind a PCF8574 on I2C3
+  linux-imx/0003-*.patch      device tree: the LCD moved to an overlay
+  linux-imx/0004-*.patch      device tree: external LED on GPIO1_IO07
+  linux-imx/0005-*.patch      device tree: overlay and composite for the yongchun-tpg test devices
+recipes-kernel/yongchun-tpg/  out-of-tree V4L2 test pattern driver, loaded by modalias at boot
 recipes-bsp/u-boot/
   u-boot-imx_%.bbappend
   u-boot-imx/0001-*.patch     defconfig: autoboot delay
+  u-boot-imx/0002-*.patch     defconfig: boot the yongchun-tpg composite by default
+scripts/
+  yuyv2png.py                 one raw YUYV frame to PNG, standard library only
+tests/                        pytest over SSH: unload, load, autoload after reboot
 docs/
+  adr/                        architecture decision records
 ```
 
 ## Documentation
@@ -136,6 +159,10 @@ says so.
   and why that had to be decided before the layer had any content
 - [ADR-0005](docs/adr/0005-carrying-vendor-patches.md) — local changes as a
   patch series, with an upgrade rehearsal across seventeen stable releases
+- [ADR-0006](docs/adr/0006-boot-device-tree-selection.md) — the board boots a
+  composite device tree, chosen by one line of U-Boot's defconfig
+- [ADR-0007](docs/adr/0007-sensor-overlays-at-boot.md) — pluggable sensors as
+  overlays listed in extlinux.conf; tried by hand on the board, not yet built
 
 Corrections are marked where they are made. ADR-0002 claimed NXP's setup
 script does not use configuration fragments; it does, and the record says so
@@ -175,7 +202,7 @@ from the vendor setup script's `root-login-with-empty-password` fragment.
 
 ## Status
 
-Week 5 of 12 — see the roadmap above. Issues and corrections are welcome,
+Weeks 1–7 done; week 8 in progress — see the roadmap above. Issues and corrections are welcome,
 particularly on anything an ADR marks as unresolved.
 
 ## Commits

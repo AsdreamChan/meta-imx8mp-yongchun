@@ -1,0 +1,67 @@
+From accef43a51c3acbcac59dfbc6205446a79d3d5ea Mon Sep 17 00:00:00 2001
+From: AsdreamChan <53651187+AsdreamChan@users.noreply.github.com>
+Date: Wed, 7 Oct 2026 11:22:56 +0800
+Subject: [PATCH 5/5] arm64: dts: imx8mp-frdm: add an overlay for the
+ yongchun-tpg test devices
+
+Add two yongchun,tpg nodes, at 30 and 9 frames per second, for the
+out-of-tree yongchun-tpg V4L2 driver, and a composite
+imx8mp-frdm-tpg.dtb that merges them into the base tree at build time
+so the board can boot with them without applying an overlay in U-Boot.
+
+The nodes describe no hardware. They are kept out of imx8mp-frdm.dts so
+the base tree stays a description of the board.
+
+Upstream-Status: Inappropriate [board-specific test device]
+
+Signed-off-by: AsdreamChan <53651187+AsdreamChan@users.noreply.github.com>
+---
+ arch/arm64/boot/dts/freescale/Makefile        |  3 +++
+ .../boot/dts/freescale/imx8mp-frdm-tpg.dtso   | 21 +++++++++++++++++++
+ 2 files changed, 24 insertions(+)
+ create mode 100644 arch/arm64/boot/dts/freescale/imx8mp-frdm-tpg.dtso
+
+diff --git a/arch/arm64/boot/dts/freescale/Makefile b/arch/arm64/boot/dts/freescale/Makefile
+index 8230a0770e48..bee80fadbb05 100644
+--- a/arch/arm64/boot/dts/freescale/Makefile
++++ b/arch/arm64/boot/dts/freescale/Makefile
+@@ -450,6 +450,9 @@ dtb-${CONFIG_ARCH_MXC} += imx8mp-frdm-waveshare-7inch-c-panel.dtb
+ imx8mp-frdm-lcd1602-dtbs := imx8mp-frdm.dtb imx8mp-frdm-lcd1602.dtbo
+ dtb-${CONFIG_ARCH_MXC} += imx8mp-frdm-lcd1602.dtb
+ 
++imx8mp-frdm-tpg-dtbs := imx8mp-frdm.dtb imx8mp-frdm-tpg.dtbo
++dtb-${CONFIG_ARCH_MXC} += imx8mp-frdm-tpg.dtb
++
+ imx8mq-evk-pcie1-ep-dtbs += imx8mq-evk.dtb imx-pcie1-ep.dtbo
+ dtb-$(CONFIG_ARCH_MXC) += imx8mq-evk-pcie1-ep.dtb
+ 
+diff --git a/arch/arm64/boot/dts/freescale/imx8mp-frdm-tpg.dtso b/arch/arm64/boot/dts/freescale/imx8mp-frdm-tpg.dtso
+new file mode 100644
+index 000000000000..e5486fbfb4ce
+--- /dev/null
++++ b/arch/arm64/boot/dts/freescale/imx8mp-frdm-tpg.dtso
+@@ -0,0 +1,21 @@
++// SPDX-License-Identifier: GPL-2.0-only
++/*
++ * Two test pattern generators for the out-of-tree yongchun-tpg V4L2
++ * driver, at 30 and 9 frames per second. They describe no hardware;
++ * they give the driver something to bind to.
++ */
++
++/dts-v1/;
++/plugin/;
++
++&{/} {
++	tpg-30hz {
++		compatible = "yongchun,tpg";
++		yongchun,frame-interval = <1 30>;
++	};
++
++	tpg-9hz {
++		compatible = "yongchun,tpg";
++		yongchun,frame-interval = <1 9>;
++	};
++};
+-- 
+2.43.0
+

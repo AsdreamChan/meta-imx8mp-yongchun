@@ -428,12 +428,15 @@ isi_0: isi@32e00000 {
 ```
 
 `interface` appears in no binding document; it is read only by NXP's staging
-media drivers (`drivers/staging/media/imx/imx8-isi-core.c` and
-`imx8-media-dev.c`), as three integers whose meaning the code does not spell
-out. Even the two `data-lanes` properties above disagree in form: a list of
-lanes on the sensor side, a lane count on NXP's CSI side. For this half of the
-pipeline the generic media bindings do not apply, and the reference is the
-vendor driver.
+media drivers (`imx8-isi-core.c`, `imx8-isi-hw.c` and `imx8-media-dev.c` in
+`drivers/staging/media/imx/`). The driver's own enums in `imx8-common.h` give the
+meaning: input source, MIPI virtual channel, output. `<2 0 2>` reads as "CSI
+receiver 0, virtual channel 0, to memory", and the media driver uses it to
+decide which receiver pad to link to which ISI pad. That is the edge an OF
+graph would otherwise describe. Even the two `data-lanes` properties above
+disagree in form: a list of lanes on the sensor side, a lane count on NXP's CSI
+side. For this half of the pipeline the generic media bindings do not apply,
+and the reference is the vendor driver.
 
 ### What the board builds without a sensor
 

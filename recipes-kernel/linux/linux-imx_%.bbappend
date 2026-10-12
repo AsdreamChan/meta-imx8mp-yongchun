@@ -28,6 +28,7 @@ SRC_URI += "file://0001-arm64-dts-imx8mp-frdm-drive-the-status-LED-from-the-.pat
 SRC_URI += "file://0002-arm64-dts-imx8mp-frdm-add-an-HD44780-LCD-behind-a-PC.patch"
 SRC_URI += "file://0003-arm64-dts-imx8mp-frdm-move-the-HD44780-LCD-to-an-ove.patch"
 SRC_URI += "file://0004-arm64-dts-imx8mp-frdm-add-an-external-LED-on-GPIO1_I.patch"
+SRC_URI += "file://0005-arm64-dts-imx8mp-frdm-add-an-overlay-for-the-yongchu.patch"
 
 # HD44780 16x2 character LCD behind a PCF8574 I2C backpack, for the
 # sprint 6 device tree work. AUXDISPLAY is only the menu gate and adds
@@ -35,3 +36,34 @@ SRC_URI += "file://0004-arm64-dts-imx8mp-frdm-add-an-external-LED-on-GPIO1_I.pat
 # set by the vendor defconfig; it is listed so the dependency survives
 # a defconfig change. HD44780_COMMON is selected, so it is not listed.
 SRC_URI += "file://hd44780.cfg"
+
+# Dynamic debug and ftrace, for the sprint 7 driver work. The vendor
+# defconfig sets neither. DYNAMIC_DEBUG needs DEBUG_FS or PROC_FS for
+# its control file; DEBUG_FS is already set. This changes the kernel
+# that boot time is measured on: numbers taken with it are not
+# comparable with the sprint 5 baseline.
+SRC_URI += "file://debug.cfg"
+
+# vivid, the kernel's virtual capture driver, as a known-good V4L2
+# source to compare the sprint 7 driver against. The vendor defconfig
+# sets MEDIA_SUPPORT_FILTER, which leaves MEDIA_TEST_SUPPORT off, and
+# drivers/media/Kconfig sources test-drivers/Kconfig only under it, so
+# both menu gates are listed or VIDEO_VIVID is dropped.
+SRC_URI += "file://vivid.cfg"
+
+# The BMP280 pressure and temperature sensor on I2C3, through the mainline
+# IIO driver, for the sprint 7 IIO work. BMP280 selects both bus front ends,
+# BMP280_I2C and BMP280_SPI, so both modules are built.
+SRC_URI += "file://iio-bmp280.cfg"
+
+# vcan, the virtual CAN interface, for the sprint 8 SocketCAN work. The
+# vendor defconfig builds the CAN core and FlexCAN as modules, not vcan.
+SRC_URI += "file://can-vcan.cfg"
+
+# meta-imx sets LOCALVERSION directly, which kernel.bbclass exports for the
+# kernel's own build. KERNEL_LOCALVERSION stays empty, and that is what
+# do_shared_workdir saves for make-mod-scripts, whose `make prepare` then
+# rewrites kernel.release in kernel-build-artifacts without "-2.0.0".
+# Out-of-tree modules, NXP's included, got a vermagic that differs from
+# uname -r and loaded only because MODVERSIONS skips the release string.
+KERNEL_LOCALVERSION = "${LOCALVERSION}"
