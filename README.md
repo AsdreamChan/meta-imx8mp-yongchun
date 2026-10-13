@@ -78,15 +78,21 @@ together.
 
 ## Tests
 
-`tests/` checks the Sprint 7 driver on a running board over SSH: the module
+`tests/` checks the board while it runs. Over SSH: the Sprint 7 driver
 unloads, loads with both devices bound, and loads again by modalias after a
-reboot. It needs [uv](https://docs.astral.sh/uv/) and key-based SSH to the
-board as root.
+reboot. On the serial console: a reboot goes through extlinux.conf, U-Boot
+loads the BMP280 overlay, and the sensor is there once Linux is up
+([ADR-0007](docs/adr/0007-sensor-overlays-at-boot.md)).
+
+It needs [uv](https://docs.astral.sh/uv/) and key-based SSH to the board as
+root. The console test also needs the board's debug USB on the host (under
+WSL2, attached with usbipd-win); without the port it is skipped.
 
 ```
 cd tests
-uv run pytest -v --board root@<board-ip>    # all three, about 35 s
-uv run pytest -v -m "not slow"              # skip the reboot
+uv run pytest -v --board root@<board-ip>    # all four, about 65 s
+uv run pytest -v -m "not slow"              # skip the reboots
+uv run pytest -v -m console --console /dev/ttyACM0
 ```
 
 ## Layout
@@ -117,7 +123,7 @@ recipes-bsp/yongchun-overlays/
   yongchun-overlays.bb        device tree overlays for plugged-in modules (BMP280), built outside the kernel
 scripts/
   yuyv2png.py                 one raw YUYV frame to PNG, standard library only
-tests/                        pytest over SSH: unload, load, autoload after reboot
+tests/                        pytest: over SSH (unload, load, autoload after reboot), and the boot path on the serial console
 docs/
   adr/                        architecture decision records
 ```

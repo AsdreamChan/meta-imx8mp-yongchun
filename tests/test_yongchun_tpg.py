@@ -1,7 +1,6 @@
 import pytest
 import subprocess
-import time
-
+from board import wait_until, reachable
 
 
 def test_rmmod_unloads(ssh):
@@ -24,26 +23,8 @@ def test_modprobe_loads(ssh):
     assert len(check_list.stdout.splitlines()) == 2
 
 
-def wait_until(predicate, timeout, interval=2.0):
-    """Call predicate() every `interval` seconds until it returns True
-    or `timeout` seconds have passed. Return True if it ever did."""
-    deadline = time.monotonic() + timeout
-    while True:
-        if predicate():
-            return True
-        if time.monotonic() >= deadline:
-            return False
-        time.sleep(interval)
-
-
 @pytest.mark.slow
 def test_reboot_autoloads(ssh):
-    def reachable():
-        try:
-            return ssh('true', timeout=10).returncode == 0
-        except subprocess.TimeoutExpired:
-            return False
-
     def module_loaded():
         try:
             return ssh('lsmod | grep -qw yongchun_tpg', timeout=10).returncode == 0
@@ -59,9 +40,9 @@ def test_reboot_autoloads(ssh):
 
     # Wait for the board to go down first. Until it does, ssh still reaches
     # the system that has not rebooted yet, and every check below would pass.
-    assert wait_until(lambda: not reachable(), timeout=60), \
+    assert wait_until(lambda: not reachable(ssh), timeout=60), \
         "board still reachable 60 s after reboot"
-    assert wait_until(reachable, timeout=180), \
+    assert wait_until(lambda: reachable(ssh), timeout=180), \
         "board not back within 180 s"
     # sshd can be up before udev has loaded the module.
     assert wait_until(module_loaded, timeout=30), \
