@@ -42,12 +42,12 @@ Built over a twelve-week plan. Nothing is claimed before it is built.
 | 4 | Vendor BSP baseline on FRDM-IMX8MPLUS, boot flow | ✅ |
 | 5 | Custom layer, machine, distro; U-Boot and kernel | ✅ |
 | 6 | Device tree: I2C sensor, pinctrl/IOMUX, GPIO LED, overlays | ✅ |
-| 7 | Out-of-tree kernel driver (IIO), packaged as a recipe | ⬜ |
-| 8 | Productisation: OTA (A/B), boot time, read-only rootfs | ⬜ |
-| 9 | Automotive stack: SocketCAN, UDS server, CP↔Linux comparison | ⬜ |
-| 10 | CI, reproducible builds (kas), documentation | ⬜ |
-| 11 | Buffer | ⬜ |
-| 12 | Wrap-up | ⬜ |
+| 7 | Out-of-tree V4L2 capture driver (virtual test-pattern generator on vb2), packaged as a module recipe and autoloaded at boot; BMP280 pressure sensor through the mainline IIO driver, described in device tree | ✅ |
+| 8 | Sensor device-tree overlays applied at boot through `extlinux.conf` `FDTOVERLAYS` (ADR-0007); SocketCAN on FlexCAN: vcan, internal loopback, then a physical bus with a CANable adapter; boot-time optimisation | in progress |
+| 9 | UDS diagnostic server over ISO-TP on SocketCAN (session control, ReadDataByIdentifier); AUTOSAR Classic vs Linux communication stack mapping; IMX219 camera sensor bring-up (stage 1) | ⬜ |
+| 10 | CI (`yocto-check-layer` on pull requests, on-target tests), shared sstate and downloads, KAS or repo manifest for a one-command build; OTA updates with A/B partitions, read-only rootfs with overlayfs, secure-boot concepts | ⬜ |
+| 11 | Buffer: close out anything that slipped from weeks 1–10 | ⬜ |
+| 12 | Final packaging: README, architecture diagram, demo GIF; a long-form technical write-up | ⬜ |
 
 Weeks 1–3 happened on a Raspberry Pi 4B and live in a separate private
 scratch repository; only the notes from that phase land here, under `docs/`.
