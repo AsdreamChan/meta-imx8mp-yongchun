@@ -3,7 +3,9 @@
 ## Status
 
 Accepted (2026-10-09), on the strength of a hand-written spike. Implemented
-in the layer in Sprint 8 (2026-10-12); see Implementation.
+in the layer in Sprint 8 (2026-10-12); see Implementation. A further
+consequence of the extlinux path, the CAAM job ring `jr@3000`, was found on
+2026-10-15; see Consequences.
 
 ## Context
 
@@ -124,6 +126,14 @@ development `bmp280.dtbo`, no build, three boots
   normal path. The alternative is changing NXP's `CONFIG_BOOTCOMMAND` so that
   `opteeoverlay` is `yes` before `bootflow scan`; that also changes what the
   EFI path gets, for a reason NXP did not write down, so it is not done.
+- **The CAAM job ring `jr@3000` stays enabled** on the normal path (found
+  2026-10-15). Through `bsp_bootcmd`, U-Boot disables it and Linux sees one
+  job ring; through extlinux it is left as the dtsi has it, so Linux sees two,
+  `caam_jr` fails to probe `30903000.jr` (error -5, "failed to flush job
+  ring 1"), and NXP's `fsl-jr-uio` then binds to it. Same class of
+  difference as the reserved memory above: the extlinux path skips U-Boot's
+  device tree changes for the secure world. Which U-Boot code disables the
+  ring, and whether OP-TEE uses it, has not been checked.
 - **A missing `fdtoverlay_addr_r` fails silently.** The board boots without its
   sensors. A boot test has to check the sensor is present, not only that the
   board came up.
@@ -145,14 +155,16 @@ development `bmp280.dtbo`, no build, three boots
 - OP-TEE moves to static shared memory, or its memory layout changes. The
   fallback's hard-coded 4 MiB would then disagree with OP-TEE in a way that
   matters.
+- OP-TEE turns out to use `jr@3000`. Linux binding it (through `fsl-jr-uio`)
+  would then conflict with the secure world, and the ring would have to be
+  disabled on the extlinux path too, for example in the layer's device tree.
 
 ## Implementation
 
-Not in Sprint 7. Candidates: Sprint 8, next to the update mechanism, because
-both decide the boot path; or Backlog. Decided by the owner.
-
-Done in Sprint 8, first in the sprint (2026-10-12). The update mechanism moved
-to Sprint 10, so the two were not done together.
+Done in Sprint 8, first in the sprint (2026-10-12). When the ADR was accepted
+the candidates were Sprint 8, next to the update mechanism because both decide
+the boot path, or the backlog; the update mechanism then moved to Sprint 10,
+so the two were not done together.
 
 What the spike showed has to be in the layer, and what it did not test (the
 list as written on 2026-10-09; the outcome follows each item):
@@ -228,3 +240,4 @@ From `sources/build-logs/imx8mp/2026-10-12-adr0007-extlinux-in-the-layer.md`:
 - `sources/build-logs/imx8mp/2026-10-09-base-dtb-boot.md` — the `CONFIG_BOOTCOMMAND` sequence and the fallback to `bsp_bootcmd`
 - `sources/build-logs/imx8mp/2026-10-08-bmp280-mainline-iio.md` — the BMP280 bring-up and the manual overlay
 - `sources/build-logs/imx8mp/2026-10-08-bmp280-mainline-iio-addendum.md` §4a — `opteeoverlay`
+- `sources/build-logs/imx8mp/2026-10-15-boot-time-crng-moal-caam-addendum.md` §1–3 — `jr@3000` on the two boot paths
