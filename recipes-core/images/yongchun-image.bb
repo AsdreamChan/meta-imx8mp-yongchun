@@ -21,6 +21,7 @@ IMAGE_INSTALL += "v4l-utils media-ctl kernel-module-vivid"
 # that name only exists after packaging, and at parse time bitbake resolves
 # kernel-module-* to the kernel recipe through its PACKAGES_DYNAMIC.
 IMAGE_INSTALL += "yongchun-tpg"
+IMAGE_INSTALL += "yongchun-bh1750"
 
 # SocketCAN tools and examples for the sprint 8 CAN work. can-utils
 # (candump, cansend) currently arrives with the vendor base image; it is

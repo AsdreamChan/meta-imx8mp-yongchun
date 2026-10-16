@@ -7,4 +7,6 @@ COMPATIBLE_MACHINE = "yongchun"
 
 inherit devicetree
 
-SRC_URI = "file://imx8mp-frdm-bmp280.dtso"
+SRC_URI = "file://imx8mp-frdm-bmp280.dtso \
+           file://imx8mp-frdm-bh1750.dtso \
+"
