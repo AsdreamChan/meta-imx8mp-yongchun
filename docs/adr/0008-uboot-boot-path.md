@@ -84,10 +84,12 @@ Tried by hand on 2026-10-16 at the U-Boot prompt (environment changed with
 With 1 s, pressing a key after `Hit any key to stop autoboot: 1` appears still
 stops autoboot (tried by hand, 2026-10-16). That keeps the U-Boot prompt
 reachable the usual way, which this project uses often (ADR-0007's spike,
-the 2026-10-15 `jr@3000` checks). 0 saves at most one more second and relies
-on the key being down before the check. Negative values were not looked into:
--1 disables autoboot (Kconfig help), and anything that removes the key check
-locks out the prompt.
+the 2026-10-15 `jr@3000` checks). Holding a key down while the board resets
+also stops it, after `reboot` and after a power-on (tried by hand,
+2026-10-16), because the key is already waiting at the check before the
+countdown. 0 would save at most one more second and leave only that way in.
+Negative values were not looked into: -1 disables autoboot (Kconfig help), and
+anything that removes the key check locks out the prompt.
 
 ### Why not `boot_targets=mmc1` alone
 
@@ -146,8 +148,6 @@ explained.
   place this could come up.
 - The board boots from eMMC. `mmc2` is second in `boot_targets`, behind an SD
   card that may still hold an old image.
-- Someone cannot stop autoboot in 1 s on their setup (not tried from a cold
-  power-on, where the USB serial bridge may reconnect late).
 
 ## Implementation
 
