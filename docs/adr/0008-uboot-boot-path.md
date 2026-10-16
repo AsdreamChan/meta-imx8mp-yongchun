@@ -42,12 +42,14 @@ board/nxp/imx8mp_frdm/imx8mp_frdm.env   boot_targets=usb0 mmc1 mmc2 dhcp
                                          (no bootmeths: every bootmeth runs, efi_mgr included)
 ```
 
-The countdown is this layer's own choice. NXP's defconfig leaves
-`CONFIG_BOOTDELAY` at its Kconfig default of 2 (`boot/Kconfig:1563–1565`); the
-layer's patch of 2026-09-25 raised it to 5, saying "Two seconds is not enough to
-reliably interrupt autoboot over a serial console when the terminal is on the
-other side of a USB bridge". That was not measured: there is no record of a
-test at 2 s.
+The countdown is this layer's own choice. NXP's defconfig does not set
+`CONFIG_BOOTDELAY` (the patched `imx8mp_frdm_defconfig` has one such line, at
+217, and it is the one the layer's patch adds), so it takes the Kconfig default
+of 2 (`boot/Kconfig:1563–1565`; only `boot/` and `common/` Kconfig files were
+searched for another default). The layer's patch of 2026-09-25 raised it to
+5, saying "Two seconds is not enough to reliably interrupt autoboot over a
+serial console when the terminal is on the other side of a USB bridge". That
+was not measured: there is no record of a test at 2 s.
 
 ### What stops autoboot
 
@@ -125,7 +127,8 @@ explained.
   included).
 - Only the stages up to `Starting kernel` are clean. Before `login:` the console
   carries terminal queries (`ESC[6n`, `ESC P+q`) sent while starting the getty;
-  nothing answers them, and about 2 s pass before the login banner. The time to
+  nothing answers them, and the login banner follows about 2 s later (whether
+  that is a reply timeout has not been checked in systemd). The time to
   `login:` measured this way varies by more than 1 s between boots. Linux-side
   timing stays on the board (`serial-getty@ttymxc1` active time).
 
