@@ -1,4 +1,4 @@
-From 3a9e51dcb328c4a30e31f23111963c4f1dbcd5c2 Mon Sep 17 00:00:00 2001
+From c40d6019ca56662f2acc20cf7286b79e95924c2e Mon Sep 17 00:00:00 2001
 From: AsdreamChan <53651187+AsdreamChan@users.noreply.github.com>
 Date: Mon, 12 Oct 2026 18:56:26 +0800
 Subject: [PATCH] imx8mp_frdm: define fdtoverlay_addr_r for extlinux overlays

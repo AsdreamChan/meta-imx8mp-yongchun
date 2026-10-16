@@ -1,4 +1,4 @@
-From 61f25dda19c90602cbfc8be3181bf8d71b063b8d Mon Sep 17 00:00:00 2001
+From 8b58d348d6f9c82aa76ac7253695218768d8b178 Mon Sep 17 00:00:00 2001
 From: AsdreamChan <53651187+AsdreamChan@users.noreply.github.com>
 Date: Wed, 7 Oct 2026 12:05:54 +0800
 Subject: [PATCH] imx8mp_frdm: boot the yongchun-tpg composite device tree by
@@ -20,7 +20,7 @@ Signed-off-by: AsdreamChan <53651187+AsdreamChan@users.noreply.github.com>
  1 file changed, 1 insertion(+), 1 deletion(-)
 
 diff --git a/configs/imx8mp_frdm_defconfig b/configs/imx8mp_frdm_defconfig
-index 452db481..18065bb0 100644
+index 7dd36957..9b61cb37 100644
 --- a/configs/imx8mp_frdm_defconfig
 +++ b/configs/imx8mp_frdm_defconfig
 @@ -38,7 +38,7 @@ CONFIG_OF_BOARD_FIXUP=y

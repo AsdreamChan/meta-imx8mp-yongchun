@@ -1,0 +1,40 @@
+From 0b5c98b6e3e40827f87fd7be15b15f3ed5eb9c85 Mon Sep 17 00:00:00 2001
+From: AsdreamChan <53651187+AsdreamChan@users.noreply.github.com>
+Date: Fri, 16 Oct 2026 02:00:00 +0800
+Subject: [PATCH] imx8mp_frdm: scan the SD card first and boot only through
+ extlinux
+
+bootflow scan ran the global efi_mgr bootmeth and then walked
+boot_targets in the order usb0 mmc1 mmc2 dhcp. On this board that cost
+about 2 s before the SD card was reached: efi_mgr failed to open an
+OP-TEE session (0.15 s), and bringing up USB took 1.8 s with nothing
+bootable attached.
+
+Put mmc1 first, so the other devices are scanned only when the SD card
+has no bootflow, and limit bootmeths to extlinux, which is how this
+layer boots. EFI, boot scripts and PXE are no longer tried by bootflow
+scan; bsp_bootcmd still runs if it finds nothing.
+
+Upstream-Status: Inappropriate [configuration for this layer's extlinux boot]
+Signed-off-by: AsdreamChan <53651187+AsdreamChan@users.noreply.github.com>
+---
+ board/nxp/imx8mp_frdm/imx8mp_frdm.env | 3 ++-
+ 1 file changed, 2 insertions(+), 1 deletion(-)
+
+diff --git a/board/nxp/imx8mp_frdm/imx8mp_frdm.env b/board/nxp/imx8mp_frdm/imx8mp_frdm.env
+index 8e30c64a..fddebc53 100644
+--- a/board/nxp/imx8mp_frdm/imx8mp_frdm.env
++++ b/board/nxp/imx8mp_frdm/imx8mp_frdm.env
+@@ -45,7 +45,8 @@ jh_netboot=setenv fdtfile ${jh_root_dtb}; setenv jh_root_mem 0x16000000@0x400000
+ 
+ boot_fdt=try
+ boot_fit=no
+-boot_targets=usb0 mmc1 mmc2 dhcp
++boot_targets=mmc1 mmc2 usb0 dhcp
++bootmeths=extlinux
+ bootm_size=0x10000000
+ console=ttymxc1,115200
+ splashimage=0x50000000
+-- 
+2.43.0
+
