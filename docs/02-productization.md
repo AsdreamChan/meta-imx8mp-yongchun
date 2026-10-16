@@ -27,8 +27,10 @@ The boot is measured in two parts, each with the clock that sees it.
 - The host-side time to `login:` is not used. Starting the getty sends
   terminal queries (`ESC[6n`, XTGETTCAP) to the console, which nothing on the
   host answers, and the login banner follows about 2 s later; the result
-  varies by more than 1 s between boots. That the 2 s is a reply timeout has
-  not been checked in the systemd source.
+  varies by more than 1 s between boots. systemd 259.5 sends the `ESC[6n`
+  queries and waits up to 333 ms for each reply (`CONSOLE_REPLY_WAIT_USEC`,
+  `src/basic/terminal-util.c:48`). Where the XTGETTCAP query comes from, and
+  how the 2 s divides among the queries, was not traced.
 - The two parts are not added into one boot time. They were measured on
   different builds (the Linux part on 2026-10-15, the firmware part on
   2026-10-16) with different clocks, and U-Boot prints `Starting kernel` about

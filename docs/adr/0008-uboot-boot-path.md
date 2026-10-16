@@ -127,8 +127,9 @@ explained.
   included).
 - Only the stages up to `Starting kernel` are clean. Before `login:` the console
   carries terminal queries (`ESC[6n`, `ESC P+q`) sent while starting the getty;
-  nothing answers them, and the login banner follows about 2 s later (whether
-  that is a reply timeout has not been checked in systemd). The time to
+  nothing answers them, and the login banner follows about 2 s later (systemd
+  259.5 waits up to 333 ms per `ESC[6n` reply, `src/basic/terminal-util.c:48`;
+  the XTGETTCAP query's source was not found). The time to
   `login:` measured this way varies by more than 1 s between boots. Linux-side
   timing stays on the board (`serial-getty@ttymxc1` active time).
 

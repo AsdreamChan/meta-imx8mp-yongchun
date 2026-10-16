@@ -5,7 +5,7 @@
 Accepted (2026-10-09), on the strength of a hand-written spike. Implemented
 in the layer in Sprint 8 (2026-10-12); see Implementation. A further
 consequence of the extlinux path, the CAAM job ring `jr@3000`, was found on
-2026-10-15; see Consequences.
+2026-10-15 and traced to OP-TEE on 2026-10-16; see Consequences.
 
 ## Context
 
@@ -127,13 +127,27 @@ development `bmp280.dtbo`, no build, three boots
   `opteeoverlay` is `yes` before `bootflow scan`; that also changes what the
   EFI path gets, for a reason NXP did not write down, so it is not done.
 - **The CAAM job ring `jr@3000` stays enabled** on the normal path (found
-  2026-10-15). Through `bsp_bootcmd`, U-Boot disables it and Linux sees one
-  job ring; through extlinux it is left as the dtsi has it, so Linux sees two,
-  `caam_jr` fails to probe `30903000.jr` (error -5, "failed to flush job
-  ring 1"), and NXP's `fsl-jr-uio` then binds to it. Same class of
-  difference as the reserved memory above: the extlinux path skips U-Boot's
-  device tree changes for the secure world. Which U-Boot code disables the
-  ring, and whether OP-TEE uses it, has not been checked.
+  2026-10-15). Through `bsp_bootcmd` Linux sees one job ring; through extlinux
+  the node keeps the dtsi's status, Linux sees two, `caam_jr` fails to probe
+  `30903000.jr` (error -5, "failed to flush job ring 1"), and NXP's
+  `fsl-jr-uio` then binds to it. The cause, traced in the source on
+  2026-10-16, is the same switch as the reserved memory above:
+  - OP-TEE (`optee-os` 4.10.0.imx, `core/drivers/crypto/caam/hal/common/hal_cfg.c`),
+    when the device tree reserves no job ring for it, takes the built-in
+    default, `CFG_JR_INDEX=2`: offset (2 + 1) × `CFG_JR_BLOCK_SIZE` (0x1000)
+    = 0x3000. With `CFG_NXP_CAAM_RUNTIME_JR=y` and
+    `CFG_CAAM_JR_DISABLE_NODE=y` it marks that node `status = "disabled"` and
+    `secure-status = "okay"` (`dt_enable_secure_status()`, `core/kernel/dt.c`);
+    with `CFG_EXTERNAL_DTB_OVERLAY=y` the change also goes into the overlay
+    OP-TEE hands to U-Boot.
+  - U-Boot applies that overlay only when `opteeoverlay` is not `no`
+    (`arch/arm/mach-imx/dt_optee.c:34–35`), that is, through `bsp_bootcmd`.
+    Through extlinux it falls back to writing the OP-TEE node and reserved
+    memory itself, and nothing touches the job ring.
+
+  Not seen directly: the overlay's contents (not dumped on the board), and
+  whether OP-TEE found a reserved ring in the device tree before falling back
+  to the default.
 - **A missing `fdtoverlay_addr_r` fails silently.** The board boots without its
   sensors. A boot test has to check the sensor is present, not only that the
   board came up.
@@ -155,9 +169,11 @@ development `bmp280.dtbo`, no build, three boots
 - OP-TEE moves to static shared memory, or its memory layout changes. The
   fallback's hard-coded 4 MiB would then disagree with OP-TEE in a way that
   matters.
-- OP-TEE turns out to use `jr@3000`. Linux binding it (through `fsl-jr-uio`)
-  would then conflict with the secure world, and the ring would have to be
-  disabled on the extlinux path too, for example in the layer's device tree.
+- OP-TEE uses `jr@3000`. **By its build configuration it does** (see
+  Consequences; 2026-10-16), so on the extlinux path Linux's `fsl-jr-uio`
+  binds a ring the secure world claims. Still to do: confirm by dumping the
+  overlay on the board, then disable the node on the extlinux path too, for
+  example in the layer's device tree. Not yet scheduled.
 
 ## Implementation
 
