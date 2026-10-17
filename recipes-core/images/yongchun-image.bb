@@ -21,5 +21,20 @@ IMAGE_INSTALL += "v4l-utils media-ctl kernel-module-vivid"
 # that name only exists after packaging, and at parse time bitbake resolves
 # kernel-module-* to the kernel recipe through its PACKAGES_DYNAMIC.
 IMAGE_INSTALL += "yongchun-tpg"
+IMAGE_INSTALL += "yongchun-bh1750"
+
+# SocketCAN tools and examples for the sprint 8 CAN work. can-utils
+# (candump, cansend) currently arrives with the vendor base image; it is
+# listed so the tools survive a change there. can-demo is the C raw socket
+# example and can-demo-python the Python one. vcan and gs_usb are listed
+# for the same reason as vivid: they come from this layer's kernel config
+# fragments (can-vcan.cfg, can-usb.cfg), and a recommendation alone can be
+# dropped.
+IMAGE_INSTALL += "can-utils can-demo can-demo-python"
+IMAGE_INSTALL += "kernel-module-vcan kernel-module-gs-usb"
+
+# The boot partition takes the overlays from yongchun-overlays' deploy
+# directory (IMAGE_BOOT_FILES in the machine conf).
+do_image_wic[depends] += "yongchun-overlays:do_deploy"
 
 export IMAGE_BASENAME = "yongchun-image"

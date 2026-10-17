@@ -2,8 +2,10 @@
 
 ## Status
 
-Accepted (2026-10-09), on the strength of a hand-written spike. The layer
-implementation is not done yet; see Implementation.
+Accepted (2026-10-09), on the strength of a hand-written spike. Implemented
+in the layer in Sprint 8 (2026-10-12); see Implementation. A further
+consequence of the extlinux path, the CAAM job ring `jr@3000`, was found on
+2026-10-15 and traced to OP-TEE on 2026-10-16; see Consequences.
 
 ## Context
 
@@ -51,7 +53,7 @@ inherited by `u-boot-imx` and not enabled (`UBOOT_EXTLINUX` unset).
 |---|---|---|
 | A. Another composite: base + tpg + bmp280, U-Boot default `fdtfile` points at it | Kernel patch, machine conf, U-Boot defconfig patch | One composite per combination of modules; a full kernel rebuild (about 46 min) and a reflash to add or drop a module; an absent module still has a node |
 | B. NXP's `bsp_bootcmd` extended to apply a list of overlays | A patch to `imx8mp_frdm.env` written by hand | A boot script of our own; a failed `fdt apply` can leave the tree half applied, so the fallback has to be written too |
-| **C. `extlinux.conf` with `FDT` and `FDTOVERLAYS`** | Machine conf (`UBOOT_EXTLINUX_*`), one line in the U-Boot environment, the kernel patch that builds the `.dtbo` | The boot no longer goes through `bsp_bootcmd`, which changes how OP-TEE's reserved memory is described (see Results); `bootargs` is written a second time, in `APPEND` |
+| **C. `extlinux.conf` with `FDT` and `FDTOVERLAYS`** | Machine conf (`UBOOT_EXTLINUX_*`), one line in the U-Boot environment, the kernel patch that builds the `.dtbo` (corrected 2026-10-12: a recipe of the layer's own builds it, not the kernel; see Implementation) | The boot no longer goes through `bsp_bootcmd`, which changes how OP-TEE's reserved memory is described (see Results); `bootargs` is written a second time, in `APPEND` |
 | D. Leave it manual | Nothing | The default boot has no sensor; nothing on the board can be tested automatically |
 
 ## Decision
@@ -124,6 +126,28 @@ development `bmp280.dtbo`, no build, three boots
   normal path. The alternative is changing NXP's `CONFIG_BOOTCOMMAND` so that
   `opteeoverlay` is `yes` before `bootflow scan`; that also changes what the
   EFI path gets, for a reason NXP did not write down, so it is not done.
+- **The CAAM job ring `jr@3000` stays enabled** on the normal path (found
+  2026-10-15). Through `bsp_bootcmd` Linux sees one job ring; through extlinux
+  the node keeps the dtsi's status, Linux sees two, `caam_jr` fails to probe
+  `30903000.jr` (error -5, "failed to flush job ring 1"), and NXP's
+  `fsl-jr-uio` then binds to it. The cause, traced in the source on
+  2026-10-16, is the same switch as the reserved memory above:
+  - OP-TEE (`optee-os` 4.10.0.imx, `core/drivers/crypto/caam/hal/common/hal_cfg.c`),
+    when the device tree reserves no job ring for it, takes the built-in
+    default, `CFG_JR_INDEX=2`: offset (2 + 1) × `CFG_JR_BLOCK_SIZE` (0x1000)
+    = 0x3000. With `CFG_NXP_CAAM_RUNTIME_JR=y` and
+    `CFG_CAAM_JR_DISABLE_NODE=y` it marks that node `status = "disabled"` and
+    `secure-status = "okay"` (`dt_enable_secure_status()`, `core/kernel/dt.c`);
+    with `CFG_EXTERNAL_DTB_OVERLAY=y` the change also goes into the overlay
+    OP-TEE hands to U-Boot.
+  - U-Boot applies that overlay only when `opteeoverlay` is not `no`
+    (`arch/arm/mach-imx/dt_optee.c:34–35`), that is, through `bsp_bootcmd`.
+    Through extlinux it falls back to writing the OP-TEE node and reserved
+    memory itself, and nothing touches the job ring.
+
+  Not seen directly: the overlay's contents (not dumped on the board), and
+  whether OP-TEE found a reserved ring in the device tree before falling back
+  to the default.
 - **A missing `fdtoverlay_addr_r` fails silently.** The board boots without its
   sensors. A boot test has to check the sensor is present, not only that the
   board came up.
@@ -139,22 +163,32 @@ development `bmp280.dtbo`, no build, three boots
 
 ### Revisit if
 
-- Sprint 8's update mechanism (RAUC or SWUpdate) needs its own boot script for
-  A/B slots. The slot selection and the overlay list have to live in the same
+- The update mechanism (RAUC or SWUpdate; moved from Sprint 8 to Sprint 10 on
+  2026-10-10) needs its own boot script for A/B slots. The slot selection and the overlay list have to live in the same
   place, which may not be extlinux.conf.
 - OP-TEE moves to static shared memory, or its memory layout changes. The
   fallback's hard-coded 4 MiB would then disagree with OP-TEE in a way that
   matters.
+- OP-TEE uses `jr@3000`. **By its build configuration it does** (see
+  Consequences; 2026-10-16), so on the extlinux path Linux's `fsl-jr-uio`
+  binds a ring the secure world claims. Still to do: confirm by dumping the
+  overlay on the board, then disable the node on the extlinux path too, for
+  example in the layer's device tree. Not yet scheduled.
 
 ## Implementation
 
-Not in Sprint 7. Candidates: Sprint 8, next to the update mechanism, because
-both decide the boot path; or Backlog. Decided by the owner.
+Done in Sprint 8, first in the sprint (2026-10-12). When the ADR was accepted
+the candidates were Sprint 8, next to the update mechanism because both decide
+the boot path, or the backlog; the update mechanism then moved to Sprint 10,
+so the two were not done together.
 
-What the spike showed has to be in the layer, and what it did not test:
+What the spike showed has to be in the layer, and what it did not test (the
+list as written on 2026-10-09; the outcome follows each item):
 
 - **U-Boot env patch**: `fdtoverlay_addr_r=0x43400000`, the address used in the
   spike, between `fdt_addr_r` (0x43000000) and `scriptaddr` (0x43500000).
+  *Done*: U-Boot patch 0003. No `Invalid fdtoverlay_addr_r` on the serial
+  console.
 - **Paths**: the class defaults to `KERNEL ../${KERNEL_IMAGETYPE}` and
   `FDTDIR ../`, relative to a file installed in the root filesystem at
   `/boot/extlinux/`. The spike used absolute paths on the FAT boot partition.
@@ -162,22 +196,64 @@ What the spike showed has to be in the layer, and what it did not test:
   `UBOOT_EXTLINUX_FDTOVERLAYS` to absolute paths, and get the deployed
   `extlinux.conf` (`u-boot.inc:368-370`) onto the boot partition through
   `IMAGE_BOOT_FILES` as `extlinux.conf;extlinux/extlinux.conf`. Not tested.
+  *Done as written*: the boot partition of the built image has
+  `/extlinux/extlinux.conf`, and the root filesystem has no copy.
 - **Console**: the class default is `console=${console},${baudrate}`, and the
   extlinux parser expands U-Boot variables in `APPEND`
   (`pxe_utils.c:654-656`). This board's `console` is already `ttymxc1,115200`
   (`imx8mp_frdm.env:50`), so the default would give
   `console=ttymxc1,115200,115200`. Set `UBOOT_EXTLINUX_CONSOLE` explicitly.
   Read from source, not tested.
+  *Done*: `/proc/cmdline` is
+  `root=/dev/mmcblk1p2 rootwait rw console=ttymxc1,115200`, one baud rate.
 - **The `.dtbo`**: a kernel patch adds `imx8mp-frdm-bmp280.dtso` and
   `KERNEL_DEVICETREE` lists the `.dtbo`, as ADR-0006 did for the tpg overlay.
+  **Corrected (2026-10-12)**: not done this way. A kernel patch is a kernel
+  input, so adding or changing a module's overlay would rebuild the whole
+  kernel, which contradicts the Decision. The overlay is instead built by
+  `recipes-bsp/yongchun-overlays`, which inherits oe-core's
+  `devicetree.bbclass`, and `IMAGE_BOOT_FILES` takes it from the `devicetree/`
+  deploy directory. The tpg and LCD overlays stay in the kernel tree, where
+  ADR-0006 put them.
 - **Checks after flashing**: `Running BSP bootcmd` absent from the serial log,
   no `Invalid fdtoverlay_addr_r`, `/proc/cmdline` (not looked at in the
-  spike), the sensor bound.
+  spike), the sensor bound. *All four held*; see below.
+
+### What the implementation showed
+
+From `sources/build-logs/imx8mp/2026-10-12-adr0007-extlinux-in-the-layer.md`:
+
+- **Changing an overlay costs 35 seconds** of build (`cleansstate` on the
+  overlay recipe, then building it again), with no kernel task run.
+- **Building the overlay recipe on its own can still build the kernel.**
+  `devicetree.bbclass` makes `do_compile` depend on the kernel's
+  `do_configure` (for the kernel's include paths), and oe-core's
+  `base.bbclass` makes every recipe's `do_build` wait for `do_deploy` of
+  everything below it. The first build took 35 minutes because the kernel was
+  out of date for an unrelated reason (a blank line removed from two kernel
+  config fragments). The image depends only on the recipe's `do_deploy`, and
+  needs the kernel anyway.
+- **The image, with the kernel current, built in 8 min 43 s.**
+- **Four boots on the board**, all as predicted:
+
+  | Boot | Path | Device tree | BMP280 | OP-TEE reserved memory |
+  |---|---|---|---|---|
+  | Normal | extlinux | tpg composite + `imx8mp-frdm-bmp280.dtbo` | loaded at boot | U-Boot fallback, 28 + 4 MiB |
+  | `extlinux/` renamed | `0 bootflows`, then `bsp_bootcmd` | tpg composite | absent | OP-TEE's overlay, 30 + 2 MiB |
+  | `run bsp_bootcmd` at the prompt, `extlinux/` present | `bsp_bootcmd` | tpg composite | absent | OP-TEE's overlay, 30 + 2 MiB |
+  | Normal again | extlinux | as the first | loaded at boot | U-Boot fallback, 28 + 4 MiB |
+
+  `tests/` passed on the normal path, the reboot test included.
+- **Not looked into**: `bootflow scan` also tries `efi_mgr` and USB before
+  the SD card, with errors on the console from both. They cost boot time and
+  are left to the boot-time work.
 
 ## References
 
 - [ADR-0006](0006-boot-device-tree-selection.md) — the composite this builds on, and the revisit condition
 - `sources/build-logs/imx8mp/2026-10-09-extlinux-fdtoverlays-spike.md` — the spike
+- `sources/build-logs/imx8mp/2026-10-12-adr0007-extlinux-in-the-layer.md` — the implementation, its build times and the four boots
 - `sources/build-logs/imx8mp/2026-10-09-base-dtb-boot.md` — the `CONFIG_BOOTCOMMAND` sequence and the fallback to `bsp_bootcmd`
 - `sources/build-logs/imx8mp/2026-10-08-bmp280-mainline-iio.md` — the BMP280 bring-up and the manual overlay
 - `sources/build-logs/imx8mp/2026-10-08-bmp280-mainline-iio-addendum.md` §4a — `opteeoverlay`
+- `sources/build-logs/imx8mp/2026-10-15-boot-time-crng-moal-caam-addendum.md` §1–3 — `jr@3000` on the two boot paths

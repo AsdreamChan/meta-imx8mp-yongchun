@@ -1,0 +1,31 @@
+From f994b8207f33ac5756a8fc1037ae307a9ee844a8 Mon Sep 17 00:00:00 2001
+From: AsdreamChan <53651187+AsdreamChan@users.noreply.github.com>
+Date: Fri, 16 Oct 2026 02:00:00 +0800
+Subject: [PATCH] configs: imx8mp_frdm: shorten the autoboot delay to one
+ second
+
+The autoboot countdown was the longest stage between the SPL banner and
+"Starting kernel": 4.9 s of 9.1 s, timed from the serial console.
+
+One second still lets autoboot be stopped by hand. A key held down while
+the board resets is already waiting when the countdown starts, so it
+stops autoboot whatever the delay.
+
+Upstream-Status: Inappropriate [configuration]
+Signed-off-by: AsdreamChan <53651187+AsdreamChan@users.noreply.github.com>
+---
+ configs/imx8mp_frdm_defconfig | 1 +
+ 1 file changed, 1 insertion(+)
+
+diff --git a/configs/imx8mp_frdm_defconfig b/configs/imx8mp_frdm_defconfig
+index 87694560..7dd36957 100644
+--- a/configs/imx8mp_frdm_defconfig
++++ b/configs/imx8mp_frdm_defconfig
+@@ -214,3 +214,4 @@ CONFIG_EFI_HAVE_CAPSULE_UPDATE=y
+ CONFIG_FIT_SIGNATURE=y
+ 
+ CONFIG_BOOTDEV_ETH=n
++CONFIG_BOOTDELAY=1
+-- 
+2.43.0
+

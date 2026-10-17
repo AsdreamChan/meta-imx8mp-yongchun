@@ -2,16 +2,31 @@
 
 import pytest
 import subprocess
+import os
+import serial
 
 
 def pytest_addoption(parser):
     parser.addoption(
         "--board", action="store", default="root@10.194.1.225", help="board to test, as user@host"
     )
+    parser.addoption(
+        "--console", action="store", default="/dev/ttyACM0", help="console to test"
+    )
 
 @pytest.fixture(scope="session")
 def board(request):
     return request.config.getoption("--board")
+
+@pytest.fixture(scope="function")
+def console(request):
+    path = request.config.getoption("--console")
+    if os.path.exists(path):
+        port = serial.Serial(path, 115200, timeout=1)
+        yield port
+        port.close()
+    else:
+        pytest.skip("no serial console at " + path)
 
 
 @pytest.fixture(scope="session")

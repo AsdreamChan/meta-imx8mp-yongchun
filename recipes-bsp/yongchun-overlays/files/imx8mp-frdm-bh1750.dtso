@@ -1,0 +1,20 @@
+// SPDX-License-Identifier: GPL-2.0-only
+/*
+ * A ROHM BH1750 ambient light sensor on a GY-302 breadboard module, on I2C3
+ * at 0x23 (ADDR low). Bound by this layer's out-of-tree driver
+ * (recipes-kernel/yongchun-bh1750), not by the mainline bh1750 driver,
+ * which matches "rohm,bh1750". Applied at boot from extlinux.conf.
+ */
+
+/dts-v1/;
+/plugin/;
+
+&i2c3 {
+	#address-cells = <1>;
+	#size-cells = <0>;
+
+	light-sensor@23 {
+		compatible = "yongchun,bh1750";
+		reg = <0x23>;
+	};
+};

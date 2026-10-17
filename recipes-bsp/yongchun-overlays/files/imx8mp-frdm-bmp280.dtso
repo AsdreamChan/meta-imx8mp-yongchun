@@ -1,0 +1,19 @@
+// SPDX-License-Identifier: GPL-2.0-only
+/*
+ * A Bosch BMP280 pressure and temperature sensor on a breadboard module,
+ * on I2C3 at 0x76 (SDO tied to ground). The module is not part of the
+ * board, so it is an overlay, applied at boot from extlinux.conf.
+ */
+
+/dts-v1/;
+/plugin/;
+
+&i2c3 {
+	#address-cells = <1>;
+	#size-cells = <0>;
+
+	pressure-sensor@76 {
+		compatible = "bosch,bmp280";
+		reg = <0x76>;
+	};
+};

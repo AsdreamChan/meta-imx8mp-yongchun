@@ -355,7 +355,8 @@ dtc -I dtb -O dts -s live.dtb > live.dts
 diff built.dts live.dts                                  # 37 lines
 ```
 
-Everything in the difference was added by U-Boot:
+Everything in the difference was added by U-Boot, on a boot through NXP's
+`bsp_bootcmd` (2026-10-03, before ADR-0007 moved the normal boot to extlinux):
 
 | Where | Added | Kind |
 |---|---|---|
@@ -363,9 +364,15 @@ Everything in the difference was added by U-Boot:
 | `ethernet@30be0000`, `ethernet@30bf0000` | `local-mac-address` | Identity of this board |
 | `/chosen` | `bootargs`, `u-boot,version`, `smbios3-entrypoint` | Boot-time parameters |
 | `/memory` | The 32 MB at `0x56000000` cut out of the RAM ranges | Memory layout |
-| `/reserved-memory` | `optee_core` (30 MB) and `optee_shm` (2 MB), `no-map` | Memory layout |
+| `/reserved-memory` | `optee_core` (30 MB) and `optee_shm` (2 MB), `no-map`; 28 + 4 MB through extlinux | Memory layout |
 | `/firmware/optee` | The OP-TEE node | Secure world |
-| CAAM `jr@3000` | `status = "disabled"` | Secure world |
+| CAAM `jr@3000` | `status = "disabled"`; left enabled through extlinux | Secure world |
+
+The `/reserved-memory` and `jr@3000` rows depend on the boot path. By the
+source of OP-TEE and U-Boot, both come from the overlay that OP-TEE hands to
+U-Boot, which U-Boot applies only when `opteeoverlay` is not `no`: through
+`bsp_bootcmd` only. Through extlinux, U-Boot writes the reserved memory itself
+and leaves the job ring alone (ADR-0007, Consequences).
 
 None of these could be written into the dts: they differ per board or are
 known only at boot. The practical consequence is where to look. When a node is
