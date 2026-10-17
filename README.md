@@ -15,7 +15,7 @@ and bootloader as a patch series against the vendor trees.
 | Machine | `yongchun`, derived from `imx8mp-lpddr4-frdm` |
 | Distro | `yongchun`, based on `fsl-imx-xwayland-minimal`, display stack removed |
 | Image | `yongchun-image` — 268 MB, 1519 packages (week 5) |
-| Boot | 11.5 s to `multi-user.target` (4.4 s kernel + 7.1 s userspace) |
+| Boot | 3.2 s from the SPL banner to `Starting kernel`; 10.2 s from kernel start to the serial login (week 8, debug kernel config; [docs/02](docs/02-productization.md)) |
 
 `yongchun` is the machine codename, after the Yongchun district in Taipei.
 
@@ -43,7 +43,7 @@ Built over a twelve-week plan. Nothing is claimed before it is built.
 | 5 | Custom layer, machine, distro; U-Boot and kernel | ✅ |
 | 6 | Device tree: I2C sensor, pinctrl/IOMUX, GPIO LED, overlays | ✅ |
 | 7 | Out-of-tree V4L2 capture driver (virtual test-pattern generator on vb2), packaged as a module recipe and autoloaded at boot; BMP280 pressure sensor through the mainline IIO driver, described in device tree | ✅ |
-| 8 | Sensor device-tree overlays applied at boot through `extlinux.conf` `FDTOVERLAYS` (ADR-0007); SocketCAN on FlexCAN: vcan, internal loopback, then a physical bus with a CANable adapter; boot-time optimisation | in progress |
+| 8 | Sensor device-tree overlays applied at boot through `extlinux.conf` `FDTOVERLAYS` (ADR-0007), with a self-written IIO driver for a BH1750 light sensor added as a second overlay; SocketCAN on FlexCAN: vcan, internal loopback, then a physical bus with a CANable adapter; boot-time optimisation: U-Boot reaches the kernel 5.9 s sooner (ADR-0008) | ✅ |
 | 9 | UDS diagnostic server over ISO-TP on SocketCAN (session control, ReadDataByIdentifier); AUTOSAR Classic vs Linux communication stack mapping; IMX219 camera sensor bring-up (stage 1) | ⬜ |
 | 10 | CI (`yocto-check-layer` on pull requests, on-target tests), shared sstate and downloads, KAS or repo manifest for a one-command build; OTA updates with A/B partitions, read-only rootfs with overlayfs, secure-boot concepts | ⬜ |
 | 11 | Buffer: close out anything that slipped from weeks 1–10 | ⬜ |
@@ -88,6 +88,12 @@ It needs [uv](https://docs.astral.sh/uv/) and key-based SSH to the board as
 root. The console test also needs the board's debug USB on the host (under
 WSL2, attached with usbipd-win); without the port it is skipped.
 
+`tests/boot_timeline.py` times the boot from the serial console: it stamps
+each line on the host and prints when each stage started, from the SPL banner
+to the login prompt. Run it from Windows, not WSL2, whose clock was measured
+about 6 % slow; only the stages up to `Starting kernel` are reliable
+([docs/02](docs/02-productization.md)).
+
 ```
 cd tests
 uv run pytest -v --board root@<board-ip>    # all four, about 65 s
@@ -102,9 +108,11 @@ conf/
   layer.conf                  priority 10, above meta-imx-bsp (8) and meta-freescale (5)
   distro/yongchun.conf        no qt, no xen, no display stack; jailhouse kept
   machine/yongchun.conf       FRDM derivative; vendor device trees trimmed from 11 to 2, plus two overlays and their composites;
-                              boots through extlinux.conf, which lists the sensor overlays
+                              boots through extlinux.conf, which lists the sensor overlays;
+                              Wi-Fi driver left out, caam_jr loaded early (boot time)
 recipes-core/images/
-  yongchun-image.bb           requires imx-image-core; drops docker; adds v4l-utils and yongchun-tpg
+  yongchun-image.bb           requires imx-image-core; drops docker; adds v4l-utils, yongchun-tpg, yongchun-bh1750,
+                              can-utils and can-demo
 recipes-kernel/linux/
   linux-imx_%.bbappend
   linux-imx/*.cfg             fragments: CAN ISO-TP, HD44780, debug, vivid, BMP280, vcan
@@ -114,16 +122,21 @@ recipes-kernel/linux/
   linux-imx/0004-*.patch      device tree: external LED on GPIO1_IO07
   linux-imx/0005-*.patch      device tree: overlay and composite for the yongchun-tpg test devices
 recipes-kernel/yongchun-tpg/  out-of-tree V4L2 test pattern driver, loaded by modalias at boot
+recipes-kernel/yongchun-bh1750/
+                              out-of-tree IIO driver for a BH1750 light sensor, loaded by modalias at boot
 recipes-bsp/u-boot/
   u-boot-imx_%.bbappend
   u-boot-imx/0001-*.patch     defconfig: autoboot delay
   u-boot-imx/0002-*.patch     defconfig: boot the yongchun-tpg composite by default
   u-boot-imx/0003-*.patch     environment: fdtoverlay_addr_r, so extlinux.conf can apply overlays
+  u-boot-imx/0004-*.patch     environment: scan the SD card first, boot only through extlinux (ADR-0008)
 recipes-bsp/yongchun-overlays/
-  yongchun-overlays.bb        device tree overlays for plugged-in modules (BMP280), built outside the kernel
+  yongchun-overlays.bb        device tree overlays for plugged-in modules (BMP280, BH1750), built outside the kernel
+recipes-examples/can-demo/    a minimal SocketCAN raw socket example, in C and in Python
 scripts/
   yuyv2png.py                 one raw YUYV frame to PNG, standard library only
-tests/                        pytest: over SSH (unload, load, autoload after reboot), and the boot path on the serial console
+tests/                        pytest: over SSH (unload, load, autoload after reboot), and the boot path on the serial console;
+                              boot_timeline.py: boot stages timed from the serial console
 docs/
   adr/                        architecture decision records
 ```
@@ -146,6 +159,9 @@ says so.
   down to the IOMUXC registers, one misconfigured on purpose, an overlay
   applied at build time and in U-Boot, and what U-Boot adds before the kernel
   sees the tree
+- [`02-productization.md`](docs/02-productization.md) — boot time: how it is
+  measured in two parts, the numbers before and after, and the commit behind
+  each change
 
 **Reference**
 
@@ -174,6 +190,8 @@ says so.
 - [ADR-0007](docs/adr/0007-sensor-overlays-at-boot.md) — pluggable sensors as
   overlays listed in extlinux.conf; built in week 8, and changing an overlay
   rebuilds no kernel
+- [ADR-0008](docs/adr/0008-uboot-boot-path.md) — U-Boot waits one second and
+  goes straight to extlinux on the SD card; 9.1 s to the kernel became 3.2 s
 
 Corrections are marked where they are made. ADR-0002 claimed NXP's setup
 script does not use configuration fragments; it does, and the record says so
@@ -213,7 +231,7 @@ from the vendor setup script's `root-login-with-empty-password` fragment.
 
 ## Status
 
-Weeks 1–7 done; week 8 in progress — see the roadmap above. Issues and corrections are welcome,
+Weeks 1–8 done — see the roadmap above. Issues and corrections are welcome,
 particularly on anything an ADR marks as unresolved.
 
 ## Commits

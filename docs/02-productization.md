@@ -64,8 +64,8 @@ Linux, kernel start → (s):
 
 | Change | Commit | Effect |
 |---|---|---|
-| Leave the NXP Wi-Fi driver (moal) and its firmware out of the image; load `caam_jr` from `modules-load.d` | `<hash>` `conf/machine/yongchun.conf` | `crng init done` 1.7 s earlier in every boot. Serial getty 0.23 s earlier, which is inside the 0.3 s spread between boots |
-| U-Boot: autoboot delay 5 s → 1 s; scan the SD card first; `bootmeths=extlinux` | `<hash>` (ADR-0008) | 5.94 s off the firmware part |
+| Leave the NXP Wi-Fi driver (moal) and its firmware out of the image; load `caam_jr` from `modules-load.d` | `6d22c1c` `conf/machine/yongchun.conf` | `crng init done` 1.6–1.7 s earlier in every boot. Serial getty 0.23 s earlier, which is inside the 0.3 s spread between boots |
+| U-Boot: autoboot delay 5 s → 1 s; scan the SD card first; `bootmeths=extlinux` | `2e40266` (ADR-0008) | 5.94 s off the firmware part |
 
 **Wi-Fi and the CRNG.** The board is headless and uses Ethernet. With moal,
 `systemd-modules-load` took about 1.5 s. Without moal, `crng init done` came
