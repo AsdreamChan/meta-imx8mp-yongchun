@@ -9,7 +9,15 @@
  * Services:
  *   0x10 DiagnosticSessionControl  default (0x01) and extended (0x03)
  *   0x22 ReadDataByIdentifier      one DID per request: 0xF190, 0xF187
+ *   0x27 SecurityAccess            level 1: requestSeed 0x01, sendKey 0x02
+ *                                  extended session only
+ *   0x2E WriteDataByIdentifier     0xF190 only, 17 bytes, extended
+ *                                  session and unlocked
  * Anything else gets a negative response (0x7F).
+ *
+ * The seed/key algorithm is a demonstration, not security: the key is
+ * the seed XORed with SECRET_MASK. A session change locks the server
+ * again. Three wrong keys lock out requestSeed for LOCKOUT_SECONDS.
  *
  * Not implemented: functional addressing (0x7DF), the S3 session
  * timeout, TesterPresent (0x3E), several DIDs in one 0x22 request.
@@ -23,6 +31,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <sys/socket.h>
+#include <time.h>
 #include <unistd.h>
 
 #include <linux/can.h>
@@ -30,35 +39,60 @@
 
 #define SID_SESSION_CONTROL	0x10
 #define SID_READ_DID		0x22
+#define SID_SECURITY_ACCESS	0x27
+#define SID_WRITE_DID		0x2E
 #define SID_NEGATIVE_RESPONSE	0x7F
 #define POSITIVE_OFFSET		0x40
 
 #define NRC_SERVICE_NOT_SUPPORTED		0x11
 #define NRC_SUBFUNCTION_NOT_SUPPORTED		0x12
 #define NRC_INCORRECT_LENGTH			0x13
+#define NRC_REQUEST_SEQUENCE_ERROR		0x24
 #define NRC_REQUEST_OUT_OF_RANGE		0x31
+#define NRC_SECURITY_ACCESS_DENIED		0x33
+#define NRC_INVALID_KEY				0x35
+#define NRC_EXCEEDED_ATTEMPTS			0x36
+#define NRC_TIME_DELAY_NOT_EXPIRED		0x37
+#define NRC_NOT_SUPPORTED_IN_SESSION		0x7F
 
 #define SESSION_DEFAULT		0x01
 #define SESSION_EXTENDED	0x03
 #define SUPPRESS_POS_RSP	0x80
+
+#define SA_REQUEST_SEED		0x01
+#define SA_SEND_KEY		0x02
+#define SEED_LEN		4
+#define SECRET_MASK		0x5A3C96F0u
+#define MAX_ATTEMPTS		3
+#define LOCKOUT_SECONDS		10
 
 /* Timing reported in the 0x10 response: P2 in 1 ms, P2* in 10 ms units. */
 #define P2_SERVER_MS		50
 #define P2_STAR_SERVER_10MS	500	/* 5000 ms */
 
 #define UDS_MAX_LEN		4095	/* ISO-TP classic length limit */
+#define DID_MAX_LEN		32
 
 struct did {
 	uint16_t id;
-	const char *data;	/* ASCII, sent without the terminating NUL */
+	uint8_t data[DID_MAX_LEN];
+	size_t len;
+	int writable;
 };
 
-static const struct did dids[] = {
-	{ 0xF190, "YONGCHUNIMX8MP001" },	/* VIN: 17 bytes, needs segmentation */
-	{ 0xF187, "YC-UDS-0001" },		/* spare part number */
+static struct did dids[] = {
+	/* VIN: 17 bytes, needs segmentation; writable when unlocked */
+	{ 0xF190, "YONGCHUNIMX8MP001", 17, 1 },
+	/* spare part number */
+	{ 0xF187, "YC-UDS-0001", 11, 0 },
 };
 
 static uint8_t session = SESSION_DEFAULT;
+static int unlocked;
+static int seed_pending;
+static uint32_t seed;
+static int failed_attempts;
+static time_t lockout_until;
 
 static size_t negative(uint8_t *rsp, uint8_t sid, uint8_t nrc)
 {
@@ -66,6 +100,16 @@ static size_t negative(uint8_t *rsp, uint8_t sid, uint8_t nrc)
 	rsp[1] = sid;
 	rsp[2] = nrc;
 	return 3;
+}
+
+static struct did *find_did(uint16_t id)
+{
+	size_t i;
+
+	for (i = 0; i < sizeof(dids) / sizeof(dids[0]); i++)
+		if (dids[i].id == id)
+			return &dids[i];
+	return NULL;
 }
 
 /* Returns the response length; 0 means send nothing. */
@@ -83,7 +127,9 @@ static size_t session_control(const uint8_t *req, size_t len, uint8_t *rsp)
 		return negative(rsp, req[0], NRC_SUBFUNCTION_NOT_SUPPORTED);
 
 	session = sub;
-	printf("session -> 0x%02x\n", session);
+	unlocked = 0;		/* any session change locks again */
+	seed_pending = 0;
+	printf("session -> 0x%02x, locked\n", session);
 
 	if (suppress)
 		return 0;
@@ -99,25 +145,129 @@ static size_t session_control(const uint8_t *req, size_t len, uint8_t *rsp)
 
 static size_t read_did(const uint8_t *req, size_t len, uint8_t *rsp)
 {
-	uint16_t id;
-	size_t i, n;
+	struct did *d;
 
 	if (len != 3)
 		return negative(rsp, req[0], NRC_INCORRECT_LENGTH);
 
-	id = (uint16_t)(req[1] << 8 | req[2]);
+	d = find_did((uint16_t)(req[1] << 8 | req[2]));
+	if (!d)
+		return negative(rsp, req[0], NRC_REQUEST_OUT_OF_RANGE);
 
-	for (i = 0; i < sizeof(dids) / sizeof(dids[0]); i++) {
-		if (dids[i].id != id)
-			continue;
-		n = strlen(dids[i].data);
+	rsp[0] = req[0] + POSITIVE_OFFSET;
+	rsp[1] = req[1];
+	rsp[2] = req[2];
+	memcpy(&rsp[3], d->data, d->len);
+	return 3 + d->len;
+}
+
+static uint32_t next_seed(void)
+{
+	static uint32_t state = 0x12345678u;
+
+	/* xorshift32: changes every request, never 0 for a nonzero state */
+	state ^= state << 13;
+	state ^= state >> 17;
+	state ^= state << 5;
+	return state;
+}
+
+static size_t security_access(const uint8_t *req, size_t len, uint8_t *rsp)
+{
+	uint8_t sub, suppress;
+	uint32_t key;
+	int i;
+
+	if (len < 2)
+		return negative(rsp, req[0], NRC_INCORRECT_LENGTH);
+
+	sub = req[1] & ~SUPPRESS_POS_RSP;
+	suppress = req[1] & SUPPRESS_POS_RSP;
+
+	if (sub != SA_REQUEST_SEED && sub != SA_SEND_KEY)
+		return negative(rsp, req[0], NRC_SUBFUNCTION_NOT_SUPPORTED);
+
+	if (session != SESSION_EXTENDED)
+		return negative(rsp, req[0], NRC_NOT_SUPPORTED_IN_SESSION);
+
+	if (sub == SA_REQUEST_SEED) {
+		if (len != 2)
+			return negative(rsp, req[0], NRC_INCORRECT_LENGTH);
+		if (time(NULL) < lockout_until)
+			return negative(rsp, req[0], NRC_TIME_DELAY_NOT_EXPIRED);
+
 		rsp[0] = req[0] + POSITIVE_OFFSET;
-		rsp[1] = req[1];
-		rsp[2] = req[2];
-		memcpy(&rsp[3], dids[i].data, n);
-		return 3 + n;
+		rsp[1] = sub;
+		if (unlocked) {
+			/* already unlocked: a zero seed says so */
+			memset(&rsp[2], 0, SEED_LEN);
+		} else {
+			seed = next_seed();
+			seed_pending = 1;
+			for (i = 0; i < SEED_LEN; i++)
+				rsp[2 + i] = seed >> (24 - 8 * i);
+		}
+		return 2 + SEED_LEN;	/* the seed is the point: never suppressed */
 	}
-	return negative(rsp, req[0], NRC_REQUEST_OUT_OF_RANGE);
+
+	/* sendKey */
+	if (len != 2 + SEED_LEN)
+		return negative(rsp, req[0], NRC_INCORRECT_LENGTH);
+	if (!seed_pending)
+		return negative(rsp, req[0], NRC_REQUEST_SEQUENCE_ERROR);
+
+	seed_pending = 0;
+	key = (uint32_t)req[2] << 24 | (uint32_t)req[3] << 16 |
+	      (uint32_t)req[4] << 8 | req[5];
+
+	if (key != (seed ^ SECRET_MASK)) {
+		if (++failed_attempts >= MAX_ATTEMPTS) {
+			failed_attempts = 0;
+			lockout_until = time(NULL) + LOCKOUT_SECONDS;
+			return negative(rsp, req[0], NRC_EXCEEDED_ATTEMPTS);
+		}
+		return negative(rsp, req[0], NRC_INVALID_KEY);
+	}
+
+	failed_attempts = 0;
+	unlocked = 1;
+	printf("security level 1 unlocked\n");
+
+	if (suppress)
+		return 0;
+
+	rsp[0] = req[0] + POSITIVE_OFFSET;
+	rsp[1] = sub;
+	return 2;
+}
+
+static size_t write_did(const uint8_t *req, size_t len, uint8_t *rsp)
+{
+	struct did *d;
+
+	if (len < 4)
+		return negative(rsp, req[0], NRC_INCORRECT_LENGTH);
+
+	if (session != SESSION_EXTENDED)
+		return negative(rsp, req[0], NRC_NOT_SUPPORTED_IN_SESSION);
+
+	d = find_did((uint16_t)(req[1] << 8 | req[2]));
+	if (!d || !d->writable)
+		return negative(rsp, req[0], NRC_REQUEST_OUT_OF_RANGE);
+
+	if (len - 3 != d->len)
+		return negative(rsp, req[0], NRC_INCORRECT_LENGTH);
+
+	if (!unlocked)
+		return negative(rsp, req[0], NRC_SECURITY_ACCESS_DENIED);
+
+	memcpy(d->data, &req[3], d->len);
+	printf("DID 0x%04X written\n", d->id);
+
+	rsp[0] = req[0] + POSITIVE_OFFSET;
+	rsp[1] = req[1];
+	rsp[2] = req[2];
+	return 3;
 }
 
 static size_t dispatch(const uint8_t *req, size_t len, uint8_t *rsp)
@@ -127,6 +277,10 @@ static size_t dispatch(const uint8_t *req, size_t len, uint8_t *rsp)
 		return session_control(req, len, rsp);
 	case SID_READ_DID:
 		return read_did(req, len, rsp);
+	case SID_SECURITY_ACCESS:
+		return security_access(req, len, rsp);
+	case SID_WRITE_DID:
+		return write_did(req, len, rsp);
 	default:
 		return negative(rsp, req[0], NRC_SERVICE_NOT_SUPPORTED);
 	}
