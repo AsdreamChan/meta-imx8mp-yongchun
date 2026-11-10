@@ -33,6 +33,11 @@ IMAGE_INSTALL += "yongchun-bh1750"
 IMAGE_INSTALL += "can-utils can-demo can-demo-python"
 IMAGE_INSTALL += "kernel-module-vcan kernel-module-gs-usb"
 
+# UDS over ISO-TP for the sprint 9 diagnostics work. can-utils packages
+# the ISO-TP tools (isotpsend, isotprecv) separately, in can-utils-isotp,
+# so they are listed on their own.
+IMAGE_INSTALL += "uds-server can-utils-isotp"
+
 # The boot partition takes the overlays from yongchun-overlays' deploy
 # directory (IMAGE_BOOT_FILES in the machine conf).
 do_image_wic[depends] += "yongchun-overlays:do_deploy"
