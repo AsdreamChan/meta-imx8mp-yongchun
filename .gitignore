@@ -5,3 +5,6 @@
 .venv/
 __pycache__/
 .pytest_cache/
+
+# per-host kas settings
+kas/local.yml

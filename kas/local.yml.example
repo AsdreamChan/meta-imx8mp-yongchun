@@ -1,0 +1,18 @@
+# Settings for one build host. Copy to kas/local.yml (not committed),
+# adjust, and add it to the command line:
+#
+#   L=path/to/meta-imx8mp-yongchun
+#   kas build $L/kas/yongchun.yml:$L/kas/accept-fsl-eula.yml:$L/kas/local.yml
+#
+# Written by Claude.
+
+header:
+  version: 23
+
+local_conf_header:
+  local-parallelism: |
+    # BB_NUMBER_THREADS and PARALLEL_MAKE multiply. 6 x 6 is what the
+    # author's host needed to stay clear of the OOM killer; size them to
+    # your own RAM.
+    BB_NUMBER_THREADS = "6"
+    PARALLEL_MAKE = "-j 6"

@@ -1,0 +1,130 @@
+# kas configuration for the yongchun image on FRDM-IMX8MPLUS.
+#
+# Run it from an empty directory outside this repository: kas clones
+# the other repositories and creates build/ in the current directory.
+#
+#   mkdir kas-work && cd kas-work
+#   L=path/to/meta-imx8mp-yongchun
+#   kas build $L/kas/yongchun.yml:$L/kas/accept-fsl-eula.yml
+#
+# The NXP layers need their EULA accepted; that is a separate file so
+# that nobody accepts it by accident. Machine-specific settings (build
+# parallelism, download and sstate directories) go in kas/local.yml,
+# which is not committed; see kas/local.yml.example.
+#
+# The repos and commits are the ones from NXP's imx-manifest for
+# rel_imx_6.18.20_2.0.0 (wrynose), as pinned by `repo manifest -r` on
+# the build host on 2026-11-10. meta-browser, meta-timesys and
+# fsl-community-bsp-base are in that manifest but not in the layer
+# list, so they are left out.
+#
+# Written by Claude.
+
+header:
+  version: 23
+
+machine: yongchun
+distro: yongchun
+target: yongchun-image
+
+repos:
+  # This repository: the layer is at its root.
+  meta-imx8mp-yongchun:
+
+  bitbake:
+    url: https://github.com/openembedded/bitbake
+    commit: a2dd9be788274d9c7280be5b1be5eb5c3990cf54
+    layers:
+      .: disabled
+
+  openembedded-core:
+    url: https://github.com/openembedded/openembedded-core
+    commit: 42fa856a00ac16b2a7a83d7ecfa60a5be192b16c
+    layers:
+      meta:
+
+  meta-yocto:
+    url: https://git.yoctoproject.org/meta-yocto
+    commit: 904846ae078ee20de073040ebb77c86e19250f56
+    layers:
+      meta-poky:
+
+  meta-openembedded:
+    url: https://github.com/openembedded/meta-openembedded
+    commit: 420222862f5a6d95023b8f5f3b7e1808b2264ef9
+    layers:
+      meta-oe:
+      meta-multimedia:
+      meta-python:
+      meta-gnome:
+      meta-networking:
+      meta-filesystems:
+      meta-perl:
+
+  meta-freescale:
+    url: https://github.com/Freescale/meta-freescale
+    commit: 3949624f36cbc5b7fd4033ce5ef001d83fc1a3e9
+
+  meta-freescale-3rdparty:
+    url: https://github.com/Freescale/meta-freescale-3rdparty
+    commit: 3358b11ef81d52b9c9972d454dd43c120cbbdaf5
+
+  meta-freescale-distro:
+    url: https://github.com/Freescale/meta-freescale-distro
+    commit: 70b7591ecaa99cb6366f93ee05df7c38d94d724b
+
+  meta-freescale-ml:
+    url: https://github.com/Freescale/meta-freescale-ml
+    commit: 1330790bc6cdd3808260a16383d928e05a0e0eeb
+
+  meta-imx:
+    url: https://github.com/nxp-imx/meta-imx
+    commit: 52516b92a70669eb58b805810f2a27a07c874771
+    layers:
+      meta-imx-bsp:
+      meta-imx-sdk:
+      meta-imx-ml:
+      meta-imx-v2x:
+
+  meta-nxp-demo-experience:
+    url: https://github.com/nxp-imx-support/meta-nxp-demo-experience
+    commit: ca3288a7a4c59cbc53e05c4f486513e521f4f74a
+
+  meta-nxp-connectivity:
+    url: https://github.com/nxp-imx/meta-nxp-connectivity
+    commit: 6760101ea4fabc52bcd171c7f0b3507d17245cab
+    layers:
+      meta-nxp-matter-baseline:
+      meta-nxp-openthread:
+
+  meta-arm:
+    url: https://git.yoctoproject.org/meta-arm
+    commit: 4112fda50b814ad6e3cfaefe5cad78a83114599a
+    layers:
+      meta-arm:
+      meta-arm-toolchain:
+
+  meta-clang:
+    url: https://github.com/kraj/meta-clang
+    commit: 78c5e12f08198f4f257a9348516d2103cd617c1d
+
+  meta-qt6:
+    url: https://github.com/YoeDistro/meta-qt6
+    commit: 3cd8b59a1303b3c079f5345c6b2555d1037925f6
+
+  meta-security:
+    url: https://git.yoctoproject.org/meta-security
+    commit: 9265f142f3890df2d00d71d13b19e95a082707ed
+    layers:
+      meta-parsec:
+      meta-tpm:
+
+  meta-virtualization:
+    url: https://git.yoctoproject.org/meta-virtualization
+    commit: 022f4356d4a9b389f51472d40a9330aa59f6bb9a
+
+local_conf_header:
+  yongchun: |
+    PACKAGE_CLASSES = "package_deb"
+    EXTRA_IMAGE_FEATURES += "package-management"
+    USER_CLASSES ?= "buildstats"
