@@ -1,0 +1,20 @@
+# Development settings for a board on the bench: root logs in with an
+# empty password, on the serial console and over SSH. This enables
+# oe-core's core/yocto/root-login-with-empty-password fragment, which the
+# repo-based setup had turned on in conf/toolcfg.conf. The tests in tests/
+# log in this way.
+#
+# Never use it for an image that leaves the bench. Add it on the command
+# line only when that is what you want:
+#
+#   L=path/to/meta-imx8mp-yongchun
+#   kas build $L/kas/yongchun.yml:$L/kas/accept-fsl-eula.yml:$L/kas/dev.yml:$L/kas/local.yml
+#
+# Written by Claude.
+
+header:
+  version: 23
+
+local_conf_header:
+  dev-root-login: |
+    OE_FRAGMENTS += "core/yocto/root-login-with-empty-password"
