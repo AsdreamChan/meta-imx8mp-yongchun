@@ -1,6 +1,7 @@
 SUMMARY = "Minimal UDS server over an ISO-TP socket"
-DESCRIPTION = "Answers DiagnosticSessionControl (0x10) and \
-ReadDataByIdentifier (0x22) on a CAN interface, using the kernel's \
+DESCRIPTION = "Answers DiagnosticSessionControl (0x10), \
+ReadDataByIdentifier (0x22), SecurityAccess (0x27) and \
+WriteDataByIdentifier (0x2E) on a CAN interface, using the kernel's \
 can-isotp module for segmentation and flow control."
 LICENSE = "MIT"
 LIC_FILES_CHKSUM = "file://${COMMON_LICENSE_DIR}/MIT;md5=0835ade698e0bcf8506ecda2f7b4f302"
