@@ -5,6 +5,11 @@
 Accepted (2026-11-12). Implemented in the layer in Sprint 10 (`kas/`,
 commit `d444dc6`); see Results.
 
+Amended 2026-11-14. The first configuration missed a setting that the
+repo-based setup kept in `conf/toolcfg.conf`, and images built from it could
+not be logged into. `kas/dev.yml` (`af0ab14`) adds it back as a separate,
+opt-in file; see "What the identical manifest missed".
+
 ## Context
 
 Until Sprint 10 the i.MX 8M Plus build came from NXP's own flow:
@@ -23,6 +28,9 @@ That tree built, but most of what made it build was not in this repository:
 - **`local.conf`** carried the NXP EULA acceptance (`ACCEPT_FSL_EULA = "1"`),
   the 6 × 6 parallelism that keeps this host clear of the OOM killer, and the
   package format — none of it reviewable or reproducible from the layer.
+- **`conf/toolcfg.conf`**, written by the setup tools rather than by hand,
+  enabled oe-core's `root-login-with-empty-password` fragment: root logs in
+  without a password, on the console and over SSH.
 - **The layer itself was built from the working copy**, so a build could
   include changes that were never committed.
 
@@ -44,6 +52,11 @@ same thing without a person at the keyboard.
 - **Per-host settings go in `kas/local.yml`**, which is ignored by git.
   `kas/local.yml.example` holds the parallelism, with a note that it is sized
   for this host.
+- **Settings for a board on the bench are a separate file as well.**
+  `kas/dev.yml` enables the `root-login-with-empty-password` fragment through
+  `OE_FRAGMENTS`. Without it root stays locked. The fragment's own description
+  says to use it only in local builds and CI, never in an image that is
+  deployed; the tests in `tests/` need it.
 - kas is run from an empty directory outside this repository: it clones the
   other repositories and creates `build/` in the current directory.
 
@@ -53,6 +66,8 @@ L=path/to/meta-imx8mp-yongchun
 cp $L/kas/local.yml.example $L/kas/local.yml
 kas build $L/kas/yongchun.yml:$L/kas/accept-fsl-eula.yml:$L/kas/local.yml
 ```
+
+For the bench, `$L/kas/dev.yml` goes before `local.yml` in that list.
 
 ### Alternatives considered
 
@@ -91,6 +106,37 @@ author, with kas already installed. It tests that the repository is complete,
 not that another host has what the build needs. A parse on a clean CI runner
 is the next step; a full build does not fit in a free runner.
 
+### What the identical manifest missed
+
+Flashed to the board, the 2026-11-11 image booted to a login prompt, but root
+could not log in: `/etc/shadow` had `root:*`. The package list was identical;
+the difference was in how the image was configured. Comparing
+`bitbake -e yongchun-image` between the two trees showed it in
+`IMAGE_FEATURES` (`allow-empty-password empty-root-password allow-root-login`)
+and `ROOTFS_POSTPROCESS_COMMAND`, and the variable history named the source:
+the `root-login-with-empty-password` fragment, enabled in
+`conf/toolcfg.conf`.
+
+With `kas/dev.yml` added, the same comparison leaves only differences with a
+known cause:
+
+- `local.conf`'s own lines: disk monitoring and `CONF_VERSION` in the old
+  tree, the shared-state paths in the new one
+- the environment (`HOME`, `PATH`, `BB_ORIGENV`, …) and timestamps
+- layer order. `BBLAYERS`, `BBPATH` and `BBFILES` hold the same entries in a
+  different order. One value depends on that order:
+  `LAYERSERIES_COMPAT_meta-freescale-ml`, appended to by `meta-imx-ml`, ends
+  up as `walnascar wrynose` instead of the full list. Both contain `wrynose`.
+- uninative, active only in the tree whose `tmp/` still held the loader; its
+  variables are excluded from task hashes (`uninative.bbclass:19`)
+
+Rebuilt from the committed layer (`af0ab14`) with `kas/dev.yml`, from shared
+state in 13 minutes 11 seconds, the image passes the board tests: the three
+driver tests over SSH and the overlay test on the serial console.
+
+**The comparison that shows two trees configure the same image is
+`bitbake -e`, not the manifest.**
+
 ## Consequences
 
 ### Accepted
@@ -106,6 +152,9 @@ is the next step; a full build does not fit in a free runner.
 - **kas uses the current directory as its work directory.** Running it inside
   an existing build tree clones 16 repositories into that tree, which happened
   once on 2026-11-11.
+- **An image built without `kas/dev.yml` cannot be logged into at all**: root
+  is locked and the layer adds no other user. That suits a BSP evaluated on
+  the bench with `dev.yml`; a product image would bring its own users.
 
 ### Gained
 
@@ -149,6 +198,9 @@ is left to the shared-state story that follows.
   fresh clone
 - `sources/build-logs/cross/2026-11-11-bitbake-sstate-summary-current.md` —
   what the Sstate summary fields count
+- `sources/build-logs/imx8mp/2026-11-14-kas-image-root-login-and-on-board.md` —
+  the locked root, the `bitbake -e` comparison, `kas/dev.yml` and the board
+  tests
 - [ADR-0003](0003-build-tree-lifecycle.md) — build trees and shared state
 
 Drafted by Claude from the build logs above; the decision is the author's.
