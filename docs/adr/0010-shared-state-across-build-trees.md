@@ -32,9 +32,10 @@ equivalence database mapped that task hash to an older, equivalent hash. With
 hash equivalence on, every task's hash is computed from its dependencies'
 *unified* hashes, and shared state is looked up by unified hash
 (`sstate.bbclass:942`, `gethash()` returns `sq_data['unihash']`). One remapped
-entry near the bottom changes every hash above it. The old database held 568
-such remappings in 7695 rows; the new tree, starting from an empty database,
-knew none of them.
+entry near the bottom changes every hash above it. Counted on 2026-11-13, the
+old database held 568 such remappings in 7695 rows — after the 2026-11-10
+build, so not necessarily the same set it held then. The new tree, starting
+from an empty database, knew none of them.
 
 bitbake warned at the start of that build (`sanity.bbclass:1033–1035`):
 
@@ -112,7 +113,8 @@ Different trees, not the same experiment.
 remappings — 0 of 5036 rows map a task hash to a different unified hash. A new
 tree with an empty database of its own would therefore compute the same
 hashes, and E2 would very likely have hit 99 % without sharing the database at
-all. E2 shows that a second tree can use shared state built elsewhere. The
+all. That is an inference; it was not run. E2 shows that a second tree can
+use shared state built elsewhere. The
 case for sharing the database rests on the 2026-11-10 build and the lookup by
 unified hash, not on E2. The direct control — shared `SSTATE_DIR`, private
 database — was not run.
