@@ -1,0 +1,14 @@
+# Accepts the NXP/Freescale EULA (meta-freescale/EULA). Add this file to
+# the command line only after reading that EULA:
+#
+#   L=path/to/meta-imx8mp-yongchun
+#   kas build $L/kas/yongchun.yml:$L/kas/accept-fsl-eula.yml
+#
+# Written by Claude.
+
+header:
+  version: 23
+
+local_conf_header:
+  accept-fsl-eula: |
+    ACCEPT_FSL_EULA = "1"

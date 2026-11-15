@@ -4,6 +4,8 @@
 
 Accepted (2026-09-17). Amended 2026-09-20: the first application of this
 decision lost the deployed image, and the copy-out list has been corrected.
+The line "`SSTATE_DIR` stays per-tree" is superseded by
+[ADR-0010](0010-shared-state-across-build-trees.md) (2026-11-14).
 
 Supersedes the disk-usage estimate in
 [ADR-0002](0002-scarthgap-to-wrynose-migration.md#consequences), which was
