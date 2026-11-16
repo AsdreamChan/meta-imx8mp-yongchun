@@ -5,6 +5,12 @@
 Accepted (2026-10-16). Implemented in the layer in Sprint 8; see
 Implementation.
 
+Amended 2026-11-17 by [ADR-0011](0011-ab-updates-with-swupdate.md)
+(Proposed): `bootcmd` starts the A/B slot's `extlinux.conf` with `sysboot`
+before `bootflow scan`, and the environment is saved. The delay,
+`boot_targets` and `bootmeths=extlinux` below stand; `bootflow scan` becomes
+the fallback.
+
 ## Context
 
 Sprint 8's boot-time work timed the boot from the serial console with
@@ -143,13 +149,16 @@ explained.
   each only through extlinux.
 - U-Boot keeps using its built-in environment (`bad CRC, using default
   environment`; this project does not `saveenv`), so these values come only
-  from the patches.
+  from the patches. *No longer true with ADR-0011: the A/B boot counter saves
+  the environment, and from then on the saved values win over the patched
+  defaults.*
 
 ### Revisit if
 
 - An update scheme needs EFI (capsule updates; `CONFIG_EFI_HAVE_CAPSULE_UPDATE`
   is set in the defconfig) or a boot script. Sprint 9's slot work is the first
-  place this could come up.
+  place this could come up. *Came up in Sprint 11: ADR-0011 needs neither,
+  and adds `sysboot` instead.*
 - The board boots from eMMC. `mmc2` is second in `boot_targets`, behind an SD
   card that may still hold an old image.
 
