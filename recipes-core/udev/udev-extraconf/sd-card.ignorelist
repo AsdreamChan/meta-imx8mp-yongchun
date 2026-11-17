@@ -1,0 +1,5 @@
+# The SD card holds both A/B slots (ADR-0011). Keep udev's automount away
+# from all of its partitions: the slot that is not running must stay
+# unmounted, since SWUpdate writes the new images straight into it. The
+# running root is mounted by the kernel, not by udev.
+/dev/mmcblk1p
