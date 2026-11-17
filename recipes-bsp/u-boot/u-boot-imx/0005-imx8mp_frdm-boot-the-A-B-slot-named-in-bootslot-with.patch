@@ -1,4 +1,4 @@
-From 3ddf1e4b19f5248681fb7bd5306d7880b24056e5 Mon Sep 17 00:00:00 2001
+From 4462e33487e4060e5e947c0cae41a19724a9bbc8 Mon Sep 17 00:00:00 2001
 From: Claude <noreply@anthropic.com>
 Date: Tue, 17 Nov 2026 01:09:00 +0800
 Subject: [PATCH] imx8mp_frdm: boot the A/B slot named in bootslot, with a boot
@@ -31,13 +31,14 @@ the board boots p1 and p2 as before.
 Written by Claude.
 
 Upstream-Status: Inappropriate [A/B layout of this layer]
+Signed-off-by: AsdreamChan <53651187+AsdreamChan@users.noreply.github.com>
 ---
  board/nxp/imx8mp_frdm/imx8mp_frdm.env | 5 +++++
  configs/imx8mp_frdm_defconfig         | 8 +++++++-
  2 files changed, 12 insertions(+), 1 deletion(-)
 
 diff --git a/board/nxp/imx8mp_frdm/imx8mp_frdm.env b/board/nxp/imx8mp_frdm/imx8mp_frdm.env
-index fddebc533e..92e1ec46fa 100644
+index fddebc53..92e1ec46 100644
 --- a/board/nxp/imx8mp_frdm/imx8mp_frdm.env
 +++ b/board/nxp/imx8mp_frdm/imx8mp_frdm.env
 @@ -59,6 +59,11 @@ ip_dyn=yes
@@ -53,7 +54,7 @@ index fddebc533e..92e1ec46fa 100644
  scriptaddr=0x43500000
  mmcargs=setenv bootargs ${jh_clk} ${mcore_clk} console=${console} root=${mmcroot}
 diff --git a/configs/imx8mp_frdm_defconfig b/configs/imx8mp_frdm_defconfig
-index 9b61cb3756..074e18a2ac 100644
+index 9b61cb37..074e18a2 100644
 --- a/configs/imx8mp_frdm_defconfig
 +++ b/configs/imx8mp_frdm_defconfig
 @@ -37,7 +37,7 @@ CONFIG_REMAKE_ELF=y
