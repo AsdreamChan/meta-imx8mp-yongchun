@@ -1,0 +1,80 @@
+From 3ddf1e4b19f5248681fb7bd5306d7880b24056e5 Mon Sep 17 00:00:00 2001
+From: Claude <noreply@anthropic.com>
+Date: Tue, 17 Nov 2026 01:09:00 +0800
+Subject: [PATCH] imx8mp_frdm: boot the A/B slot named in bootslot, with a boot
+ counter
+
+For OTA updates with SWUpdate (the layer's ADR-0011), U-Boot picks one
+of two slots, each a boot partition (kernel, device trees,
+extlinux.conf) and a root partition, and falls back to the other slot
+when a new one fails to come up.
+
+- bootslot (dualA or dualB, as in NXP's meta-swupdate-imx) selects the
+  slot. adjustbootsource turns it into the boot partition (mmcpart 1
+  or 3) and the root partition (rootpart 2 or 4, and mmcroot for
+  bsp_bootcmd). rootpart defaults to 2, so an extlinux.conf that names
+  root=/dev/mmcblk1p${rootpart} still boots slot A when bootflow scan
+  is run by hand.
+- slotboot starts that boot partition's /extlinux/extlinux.conf with
+  sysboot, so FDT and FDTOVERLAYS keep working. bootcmd runs it before
+  bootflow scan, which stays as a fallback with bsp_bootcmd.
+- The boot counter lives in the environment (BOOTCOUNT_ENV) and counts
+  only while upgrade_available is set. Past bootlimit (3) U-Boot runs
+  altbootcmd, which switches bootslot, clears upgrade_available and
+  bootcount, saves and boots again.
+- The environment gets a second copy at 0x704000, after the first at
+  0x700000, so a power cut while saving leaves one valid copy.
+
+On a card with today's two partitions, bootslot defaults to dualA and
+the board boots p1 and p2 as before.
+
+Written by Claude.
+
+Upstream-Status: Inappropriate [A/B layout of this layer]
+---
+ board/nxp/imx8mp_frdm/imx8mp_frdm.env | 5 +++++
+ configs/imx8mp_frdm_defconfig         | 8 +++++++-
+ 2 files changed, 12 insertions(+), 1 deletion(-)
+
+diff --git a/board/nxp/imx8mp_frdm/imx8mp_frdm.env b/board/nxp/imx8mp_frdm/imx8mp_frdm.env
+index fddebc533e..92e1ec46fa 100644
+--- a/board/nxp/imx8mp_frdm/imx8mp_frdm.env
++++ b/board/nxp/imx8mp_frdm/imx8mp_frdm.env
+@@ -59,6 +59,11 @@ ip_dyn=yes
+ mmcdev=CONFIG_ENV_MMC_DEVICE_INDEX
+ mmcpart=1
+ mmcroot=/dev/mmcblk1p2 rootwait rw
++bootslot=dualA
++rootpart=2
++adjustbootsource=if test "${bootslot}" = dualB; then setenv mmcpart 3; setenv rootpart 4; else setenv mmcpart 1; setenv rootpart 2; fi; setenv mmcroot /dev/mmcblk${mmcdev}p${rootpart} rootwait rw
++slotboot=echo Booting slot ${bootslot} from mmc ${mmcdev}:${mmcpart} ...; sysboot mmc ${mmcdev}:${mmcpart} any ${scriptaddr} /extlinux/extlinux.conf
++altbootcmd=echo Boot limit reached on slot ${bootslot}, rolling back ...; if test "${bootslot}" = dualB; then setenv bootslot dualA; else setenv bootslot dualB; fi; setenv upgrade_available 0; setenv bootcount 0; saveenv; run bootcmd
+ mmcautodetect=yes
+ scriptaddr=0x43500000
+ mmcargs=setenv bootargs ${jh_clk} ${mcore_clk} console=${console} root=${mmcroot}
+diff --git a/configs/imx8mp_frdm_defconfig b/configs/imx8mp_frdm_defconfig
+index 9b61cb3756..074e18a2ac 100644
+--- a/configs/imx8mp_frdm_defconfig
++++ b/configs/imx8mp_frdm_defconfig
+@@ -37,7 +37,7 @@ CONFIG_REMAKE_ELF=y
+ CONFIG_OF_BOARD_FIXUP=y
+ CONFIG_OF_BOARD_SETUP=y
+ CONFIG_OF_SYSTEM_SETUP=y
+-CONFIG_BOOTCOMMAND="run sr_ir_v2_cmd;bootflow scan -lb; run bsp_bootcmd"
++CONFIG_BOOTCOMMAND="run sr_ir_v2_cmd;run adjustbootsource;run slotboot;bootflow scan -lb; run bsp_bootcmd"
+ CONFIG_DEFAULT_FDT_FILE="imx8mp-frdm-tpg.dtb"
+ CONFIG_ARCH_MISC_INIT=y
+ CONFIG_BOARD_EARLY_INIT_F=y
+@@ -215,3 +215,9 @@ CONFIG_FIT_SIGNATURE=y
+ 
+ CONFIG_BOOTDEV_ETH=n
+ CONFIG_BOOTDELAY=1
++CONFIG_ENV_REDUNDANT=y
++CONFIG_ENV_OFFSET_REDUND=0x704000
++CONFIG_CMD_SYSBOOT=y
++CONFIG_BOOTCOUNT_LIMIT=y
++CONFIG_BOOTCOUNT_ENV=y
++CONFIG_BOOTCOUNT_BOOTLIMIT=3
+-- 
+2.43.0
+

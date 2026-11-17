@@ -38,6 +38,11 @@ IMAGE_INSTALL += "kernel-module-vcan kernel-module-gs-usb"
 # so they are listed on their own.
 IMAGE_INSTALL += "uds-server can-utils-isotp"
 
+# fw_printenv and fw_setenv, for the OTA boot counter in U-Boot's
+# environment (ADR-0011). u-boot-imx-env carries /etc/fw_env.config and
+# the default environment.
+IMAGE_INSTALL += "libubootenv-bin u-boot-imx-env"
+
 # The boot partition takes the overlays from yongchun-overlays' deploy
 # directory (IMAGE_BOOT_FILES in the machine conf).
 do_image_wic[depends] += "yongchun-overlays:do_deploy"
