@@ -1,0 +1,40 @@
+# short-description: SD card image with A/B slots (ADR-0011)
+# long-description:
+# GPT, with imx-boot raw at IMX_BOOT_SEEK as in meta-freescale's
+# imx-imx-boot-bootpart.wks.in, then two slots of a FAT boot and an ext4
+# root each, and a data partition that updates leave alone.
+#
+#  - ---------- ------- ------- ------- ------- ------
+# | | imx-boot | bootA | rootA | bootB | rootB | data |
+#  - ---------- ------- ------- ------- ------- ------
+# ^ ^          ^
+# 0 32 KiB     8 MiB
+#
+# The U-Boot environment is at 7 MiB and 7 MiB + 16 KiB, between imx-boot
+# and bootA. wic writes nothing there, so the image carries zeros at those
+# offsets.
+#
+# The partition numbers are the ones U-Boot's adjustbootsource sets:
+# bootA 1, rootA 2, bootB 3, rootB 4. Both slots get the same boot files and
+# root file system, so slot B boots before any update has been installed.
+#
+# Only bootA is marked bootable (--active), as the vendor's boot partition
+# was: the bootflow scan that follows slotboot in bootcmd only looks at
+# bootable partitions.
+#
+# Only rootA has a mount point, and it is /, so wic has no other partition to
+# add to /etc/fstab. data is formatted but not mounted yet.
+#
+# Sizes are fixed (ADR-0011): bootA and bootB 256 MiB, rootA and rootB 3 GiB,
+# data 1 GiB.
+#
+# Written by Claude.
+#
+part u-boot --source rawcopy --sourceparams="file=imx-boot.tagged" --ondisk mmcblk --no-table --align ${IMX_BOOT_SEEK}
+part --source bootimg-partition --ondisk mmcblk --fstype=vfat --label bootA --active --align 8192 --fixed-size 256
+part / --source rootfs --ondisk mmcblk --fstype=ext4 --label rootA --align 8192 --fixed-size 3072
+part --source bootimg-partition --ondisk mmcblk --fstype=vfat --label bootB --align 8192 --fixed-size 256
+part --source rootfs --ondisk mmcblk --fstype=ext4 --label rootB --align 8192 --fixed-size 3072
+part --ondisk mmcblk --fstype=ext4 --label data --align 8192 --fixed-size 1024
+
+bootloader --ptable gpt
