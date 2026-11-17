@@ -1,0 +1,45 @@
+software =
+{
+	version = "@@DISTRO_VERSION@@";
+	description = "yongchun root file system for the slot that is not running (ADR-0011)";
+
+	hardware-compatibility: [ "@@SWUPDATE_HW_REVISION@@" ];
+
+	/* swupdate -e stable,copy-A or -e stable,copy-B picks the target */
+	stable = {
+		copy-A: {
+			images: (
+			{
+				filename = "@@SWU_ROOTFS@@";
+				type = "raw";
+				device = "/dev/disk/by-partlabel/rootA";
+				compressed = "zlib";
+				installed-directly = true;
+				sha256 = "$swupdate_get_sha256(@@SWU_ROOTFS@@)";
+			}
+			);
+			bootenv: (
+			{ name = "bootslot"; value = "dualA"; },
+			{ name = "upgrade_available"; value = "1"; },
+			{ name = "bootcount"; value = "0"; }
+			);
+		};
+		copy-B: {
+			images: (
+			{
+				filename = "@@SWU_ROOTFS@@";
+				type = "raw";
+				device = "/dev/disk/by-partlabel/rootB";
+				compressed = "zlib";
+				installed-directly = true;
+				sha256 = "$swupdate_get_sha256(@@SWU_ROOTFS@@)";
+			}
+			);
+			bootenv: (
+			{ name = "bootslot"; value = "dualB"; },
+			{ name = "upgrade_available"; value = "1"; },
+			{ name = "bootcount"; value = "0"; }
+			);
+		};
+	};
+}

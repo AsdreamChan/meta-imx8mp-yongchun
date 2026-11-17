@@ -1,0 +1,12 @@
+# Sourced by swupdate.sh before it starts the daemon.
+#
+# sw-description has one mode per slot under the "stable" collection
+# (copy-A, copy-B); SWUpdate installs the one -e names. Name the slot the
+# running root is not on, from the device mounted at /. Not bootslot: that
+# is the slot U-Boot starts next, which fw_setenv may already have
+# changed. On any other root device no mode is given and SWUpdate finds
+# nothing to install.
+case "$(findmnt -no SOURCE /)" in
+/dev/mmcblk1p2) SWUPDATE_ARGS="$SWUPDATE_ARGS -e stable,copy-B" ;;
+/dev/mmcblk1p4) SWUPDATE_ARGS="$SWUPDATE_ARGS -e stable,copy-A" ;;
+esac

@@ -43,6 +43,12 @@ IMAGE_INSTALL += "uds-server can-utils-isotp"
 # the default environment.
 IMAGE_INSTALL += "libubootenv-bin u-boot-imx-env"
 
+# SWUpdate for A/B updates (ADR-0011): the daemon, and swupdate-client to
+# hand it a .swu from the shell. yongchun-update packs the root file
+# system as ext4.gz.
+IMAGE_INSTALL += "swupdate swupdate-client"
+IMAGE_FSTYPES += "ext4.gz"
+
 # The boot partition takes the overlays from yongchun-overlays' deploy
 # directory (IMAGE_BOOT_FILES in the machine conf).
 do_image_wic[depends] += "yongchun-overlays:do_deploy"

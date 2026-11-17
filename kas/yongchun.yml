@@ -123,6 +123,12 @@ repos:
     url: https://git.yoctoproject.org/meta-virtualization
     commit: 022f4356d4a9b389f51472d40a9330aa59f6bb9a
 
+  # Not in NXP's manifest: SWUpdate for A/B updates (ADR-0011). The
+  # wrynose branch as of 2026-11-16; its layer.conf declares wrynose.
+  meta-swupdate:
+    url: https://github.com/sbabic/meta-swupdate
+    commit: 4c355d945f47bd825d950aa62c7aa6f24b437fe0
+
 local_conf_header:
   yongchun: |
     PACKAGE_CLASSES = "package_deb"
