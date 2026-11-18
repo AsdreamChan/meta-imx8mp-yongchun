@@ -2,11 +2,10 @@
 
 ## Status
 
-Proposed (2026-11-17). The choices below rest on a spike: the board's current
-state, a GPT image built and booted, and U-Boot and SWUpdate source read at the
-versions this layer builds. Nothing of the update itself has run on the board
-yet. This becomes Accepted when one update and one rollback have, and Results
-is filled in.
+Accepted (2026-11-18), after one update and one rollback on the board; see
+Results. Proposed on 2026-11-17, from a spike: the board's state, a GPT image
+built and booted, and U-Boot and SWUpdate source read at the versions this
+layer builds. Signing, part of the decision, is not implemented yet.
 
 Amends [ADR-0008](0008-uboot-boot-path.md): how U-Boot finds the partition to
 boot, and whether the environment is ever saved.
@@ -198,8 +197,9 @@ macros in `APPEND` before setting `bootargs` (`pxe_utils.c:654`).
 - **A reset the board makes on its own during boot counts as a failed boot.**
   The board reset itself early in systemd on 2026-11-16 (right after
   `Hostname set`) and on 2026-11-17 (about 1.5 s after it, on its usual power
-  supply); the cause is not known. It has to be understood before a rollback
-  test means anything.
+  supply); the cause is not known. Such a reset makes a rollback test
+  meaningless unless the serial log shows that every counted boot followed a
+  `reboot`, as it did in the test under Results.
 
 ### Gained
 
@@ -218,7 +218,38 @@ macros in `APPEND` before setting `bootargs` (`pxe_utils.c:654`).
 
 ## Results
 
-To be filled in when one update and one rollback have run on the board.
+On the board on 2026-11-18, with one `.swu` built from this layer, unsigned.
+The board started on slot A; nothing was flashed.
+
+- **Update, A to B.** SWUpdate chose `copy-B`, wrote the boot image (18.7 MB
+  gzipped) to bootB and the root image (336.5 MB gzipped) to rootB, and set
+  `bootslot=dualB`, `upgrade_available=1`, `bootcount=0`. U-Boot saved the
+  environment once and booted slot dualB from `mmc 1:3`, with
+  `root=/dev/mmcblk1p4`. `yongchun-mark-good` ran, and after login the
+  environment read `dualB`, `0`, `0`. On the next boot U-Boot saved nothing.
+- **Rollback, B to A.** From slot B, an update to A, and before rebooting the
+  service was masked in the new rootA (a link to `/dev/null`), so the new slot
+  boots but never reports success. Slot dualA booted three times, with
+  `bootcount` 1, 2 and 3, each saved by U-Boot. On the fourth boot U-Boot
+  printed `Warning: Bootlimit (3) exceeded. Using altbootcmd.` and
+  `Boot limit reached on slot dualA, rolling back ...`, saved, and booted
+  dualB from `mmc 1:3`. Linux came up on rootB with `dualB`, `0`, `0`.
+- **Every reset was a `reboot`.** U-Boot started six times in the run, each
+  time two lines after the kernel's `reboot: Restarting system`, so no counted
+  boot came from the board resetting itself. The resets of 2026-11-16 and
+  2026-11-17 remain unexplained. The author suspects the supply: the power
+  cable then in use came with the Raspberry Pi and may carry 3 A or less,
+  while a USB hub and the CANable drew from the board. Not measured yet.
+- **The rollback boot writes the environment twice**: once when `bootcount`
+  reaches 4, once in `altbootcmd`.
+
+Not yet done:
+
+- **Signing** (Decision, "Update images are signed"). The `.swu` above is
+  unsigned and the image accepts unsigned ones.
+- **SSH host keys and the machine ID** are generated anew after each update,
+  because they live in the root file system; `ssh` clients see a changed host
+  key. They belong on the data partition with the read-only root.
 
 ## References
 
@@ -229,6 +260,16 @@ To be filled in when one update and one rollback have run on the board.
   `bootflow scan` with a label
 - `sources/build-logs/imx8mp/2026-11-16-gpt-wic-test.md` — the GPT test,
   and the two open items (journal not loaded on the first flash, the reset)
+- `sources/build-logs/imx8mp/2026-11-17-uboot-ab-slot-bootcount-and-fw-env.md`,
+  `2026-11-17-ota-step2-gpt-ab-slots.md`,
+  `2026-11-17-ota-step3-swupdate-rootfs-to-slot-b.md`,
+  `2026-11-18-ota-step4-boot-partition-in-swu.md` — the U-Boot side, the
+  five-partition card, and SWUpdate writing the root, then the boot partition
+- `sources/build-logs/imx8mp/2026-11-18-ota-step6-mark-good-and-rollback.md` —
+  the update and the rollback under Results
+- `sources/build-logs/cross/2026-11-18-swupdate-bootloader-handler-systemd-and-uboot-bootcount-env.md`
+  and its addendum — why SWUpdate needs `CONFIG_BOOTLOADERHANDLER` and
+  `CONFIG_SYSTEMD`, and how `bootcount` is stored
 - `sources/build-logs/cross/2026-11-16-ota-layers-wrynose-branches.md`,
   `…-ota-swupdate-rauc-uboot-integration.md`,
   `…-uboot-extlinux-append-and-redundant-env.md`,
