@@ -1,0 +1,7 @@
+# Sourced by swupdate.sh before it starts the daemon.
+#
+# The public key that verifies sw-description.sig (CONFIG_SIGNED_IMAGES in
+# yongchun.cfg). A daemon built for signed images and given no key exits
+# at start (core/swupdate.c:1006-1009). The key is installed by
+# swupdate_%.bbappend from SWUPDATE_PUBLIC_KEY.
+SWUPDATE_ARGS="$SWUPDATE_ARGS -k /etc/swu_public.pem"

@@ -16,3 +16,15 @@ local_conf_header:
     # your own RAM.
     BB_NUMBER_THREADS = "6"
     PARALLEL_MAKE = "-j 6"
+  local-swupdate-key: |
+    # The key that signs the .swu (ADR-0011). Keep all three files outside
+    # every repository; only swu_public.pem goes into the image. Made with:
+    #   mkdir -p -m 700 ~/keys/swupdate && cd ~/keys/swupdate
+    #   openssl rand -base64 32 > passphrase && chmod 600 passphrase
+    #   openssl genrsa -aes256 -passout file:passphrase -out priv.pem 4096
+    #   openssl rsa -in priv.pem -passin file:passphrase -pubout -out swu_public.pem
+    # A board accepts only updates signed with the key whose public half it
+    # carries: lose priv.pem and the boards in the field need reflashing.
+    SWUPDATE_PRIVATE_KEY = "/home/you/keys/swupdate/priv.pem"
+    SWUPDATE_PASSWORD_FILE = "/home/you/keys/swupdate/passphrase"
+    SWUPDATE_PUBLIC_KEY = "/home/you/keys/swupdate/swu_public.pem"
