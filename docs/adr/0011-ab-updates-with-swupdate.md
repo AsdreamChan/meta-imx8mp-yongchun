@@ -5,7 +5,7 @@
 Accepted (2026-11-18), after one update and one rollback on the board; see
 Results. Proposed on 2026-11-17, from a spike: the board's state, a GPT image
 built and booted, and U-Boot and SWUpdate source read at the versions this
-layer builds. Signing, part of the decision, is not implemented yet.
+layer builds. Signing followed later the same day (Results).
 
 Amends [ADR-0008](0008-uboot-boot-path.md): how U-Boot finds the partition to
 boot, and whether the environment is ever saved.
@@ -243,10 +243,26 @@ The board started on slot A; nothing was flashed.
 - **The rollback boot writes the environment twice**: once when `bootcount`
   reaches 4, once in `altbootcmd`.
 
+Signing, later on 2026-11-18. `sw-description` is signed with RSA PKCS#1.5
+and a 4096-bit key; the daemon checks it against `/etc/swu_public.pem`. The
+board started on slot B, whose daemon did not check signatures.
+
+- **The first signed `.swu` went in unchecked.** Slot B's daemon skipped
+  `sw-description.sig` (`Not required: skipping`) and wrote slot A, which
+  came up with `-k /etc/swu_public.pem` on the daemon's command line.
+- **Slot A refused two `.swu` files**, and the environment stayed `dualA`,
+  `0`, `0` after each. One held only `sw-description`: `description file name
+  not the first of the list: TRAILER!!! instead of sw-description.sig`. The
+  other held `sw-description` changed after signing, with the original
+  signature: `EVP_DigestVerifyFinal failed`, then `Compatible SW not found`.
+- **Slot A installed the signed `.swu`** (`Verified OK`) into slot B, which
+  booted and read `dualB`, `0`, `0`.
+- **Every build now needs the key.** Without `SWUPDATE_PUBLIC_KEY` the
+  `swupdate` recipe stops; without `SWUPDATE_PRIVATE_KEY`, `yongchun-update`
+  does. A CI build needs a key of its own.
+
 Not yet done:
 
-- **Signing** (Decision, "Update images are signed"). The `.swu` above is
-  unsigned and the image accepts unsigned ones.
 - **SSH host keys and the machine ID** are generated anew after each update,
   because they live in the root file system; `ssh` clients see a changed host
   key. They belong on the data partition with the read-only root.
@@ -267,6 +283,8 @@ Not yet done:
   five-partition card, and SWUpdate writing the root, then the boot partition
 - `sources/build-logs/imx8mp/2026-11-18-ota-step6-mark-good-and-rollback.md` —
   the update and the rollback under Results
+- `sources/build-logs/imx8mp/2026-11-18-ota-step5-signed-swu.md` — signing
+  under Results
 - `sources/build-logs/cross/2026-11-18-swupdate-bootloader-handler-systemd-and-uboot-bootcount-env.md`
   and its addendum — why SWUpdate needs `CONFIG_BOOTLOADERHANDLER` and
   `CONFIG_SYSTEMD`, and how `bootcount` is stored
