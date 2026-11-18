@@ -1,7 +1,7 @@
 software =
 {
 	version = "@@DISTRO_VERSION@@";
-	description = "yongchun root file system for the slot that is not running (ADR-0011)";
+	description = "yongchun boot partition and root file system for the slot that is not running (ADR-0011)";
 
 	hardware-compatibility: [ "@@SWUPDATE_HW_REVISION@@" ];
 
@@ -9,6 +9,14 @@ software =
 	stable = {
 		copy-A: {
 			images: (
+			{
+				filename = "@@SWU_BOOTFS@@";
+				type = "raw";
+				device = "/dev/disk/by-partlabel/bootA";
+				compressed = "zlib";
+				installed-directly = true;
+				sha256 = "$swupdate_get_sha256(@@SWU_BOOTFS@@)";
+			},
 			{
 				filename = "@@SWU_ROOTFS@@";
 				type = "raw";
@@ -26,6 +34,14 @@ software =
 		};
 		copy-B: {
 			images: (
+			{
+				filename = "@@SWU_BOOTFS@@";
+				type = "raw";
+				device = "/dev/disk/by-partlabel/bootB";
+				compressed = "zlib";
+				installed-directly = true;
+				sha256 = "$swupdate_get_sha256(@@SWU_BOOTFS@@)";
+			},
 			{
 				filename = "@@SWU_ROOTFS@@";
 				type = "raw";
