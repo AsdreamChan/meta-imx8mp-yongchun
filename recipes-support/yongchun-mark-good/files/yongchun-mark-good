@@ -1,0 +1,22 @@
+#!/bin/sh
+# Mark the running A/B slot good (ADR-0011).
+#
+# SWUpdate sets upgrade_available=1 when it installs into a slot; while it
+# is set, U-Boot counts boots in bootcount and, past bootlimit, runs
+# altbootcmd to boot the other slot. A boot that gets as far as this
+# service clears both, so the slot is kept.
+#
+# Both variables go in one write (fw_setenv -s - reads name=value lines
+# from stdin), so the environment is saved once.
+#
+# Written by Claude.
+
+slot=$(fw_printenv -n bootslot 2>/dev/null)
+
+if [ "$(fw_printenv -n upgrade_available 2>/dev/null)" != "1" ]; then
+    echo "upgrade_available is not set; slot ${slot:-?} already good"
+    exit 0
+fi
+
+printf 'upgrade_available=0\nbootcount=0\n' | fw_setenv -s - || exit 1
+echo "slot ${slot:-?} marked good"

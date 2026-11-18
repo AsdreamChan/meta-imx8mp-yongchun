@@ -47,6 +47,10 @@ IMAGE_INSTALL += "libubootenv-bin u-boot-imx-env"
 # hand it a .swu from the shell. yongchun-update packs the root file
 # system as ext4.gz.
 IMAGE_INSTALL += "swupdate swupdate-client"
+
+# Clears upgrade_available late in boot, so U-Boot keeps an updated slot
+# that boots (ADR-0011).
+IMAGE_INSTALL += "yongchun-mark-good"
 IMAGE_FSTYPES += "ext4.gz"
 
 # The boot partition takes the overlays from yongchun-overlays' deploy

@@ -1,0 +1,14 @@
+[Unit]
+Description=Mark the running A/B slot good
+# Late in boot: once the services this image is for have started. A boot
+# that never gets here leaves upgrade_available set, and U-Boot boots the
+# other slot after bootlimit tries (ADR-0011).
+After=swupdate.service sshd.socket systemd-user-sessions.service network.target
+
+[Service]
+Type=oneshot
+ExecStart=/usr/sbin/yongchun-mark-good
+RemainAfterExit=yes
+
+[Install]
+WantedBy=multi-user.target
